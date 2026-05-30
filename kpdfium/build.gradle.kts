@@ -6,6 +6,29 @@ plugins {
 
     id("kioarch.versioning")
     id("kioarch.detekt")
+    id("kpdfium")
+}
+
+val os = System.getProperty("os.name").lowercase()
+val arch = System.getProperty("os.arch").lowercase()
+val platformClassifier = when {
+    os.contains("win") -> "win-x64"
+    os.contains("mac") || os.contains("darwin") -> {
+        if (arch.contains("aarch64") || arch.contains("arm64")) "mac-arm64" else "mac-x64"
+    }
+    os.contains("nux") -> {
+        if (arch.contains("aarch64") || arch.contains("arm64")) "linux-arm64" else "linux-x64"
+    }
+    else -> throw UnsupportedOperationException("Unsupported OS: $os")
+}
+
+downloadPdfium {
+    pdfiumVersion.set(libs.versions.pdfium.get())
+    enableLocalCompile.set(true)
+    architectures.set(listOf(platformClassifier))
+    jniLibsDir.set(layout.projectDirectory.dir("src/cpp/pdfium"))
+    headersDir.set(layout.projectDirectory.dir("src/cpp/include"))
+    buildTmpDir.set(layout.buildDirectory.dir("tmp"))
 }
 
 kotlin {
@@ -74,25 +97,4 @@ mavenPublishing {
 
 
 
-val downloadDesktopPdfium by tasks.registering(DownloadDesktopPdfiumTask::class) {
-    group = "setup"
-    description = "Downloads precompiled PDFium Desktop binaries depending on host OS"
 
-    outputDir.set(layout.projectDirectory.dir("src/cpp/pdfium"))
-    buildTmpDir.set(layout.buildDirectory.dir("tmp"))
-}
-
-
-
-val compileDesktopJni by tasks.registering(CompileDesktopJniTask::class) {
-    group = "build"
-    description = "Compiles pdfium-jni C++ shared library locally using CMake on Windows"
-    dependsOn(downloadDesktopPdfium)
-
-    sourceDir.set(layout.projectDirectory.dir("src/cpp"))
-    outputDir.set(layout.projectDirectory.dir("src/jvmMain/resources/win32-x86-64"))
-}
-
-tasks.named("jvmProcessResources") {
-    dependsOn(compileDesktopJni)
-}

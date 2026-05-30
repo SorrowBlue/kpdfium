@@ -1,4 +1,5 @@
 [versions]
+pdfium = "chromium/7857"
 # Plugins
 kotlin = "2.3.21"
 agp = "9.2.1"
