@@ -48,6 +48,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.io.core)
         }
         jvmMain.dependencies {
             // JVM JNI dynamic library loading (no JNA dependency required!)
@@ -55,6 +56,10 @@ kotlin {
         androidMain.dependencies {
             implementation(project(":kpdfium:android"))
         }
+    }
+
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 }
 

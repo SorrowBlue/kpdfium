@@ -31,9 +31,28 @@ internal object JniLoader {
 
             val resourceSubdir = "$osDir-$archDir"
             
-            // Temporary directory to extract both libraries to ensure relative DLL dependency loading works on Windows
-            val tempDir = Files.createTempDirectory("kpdfium-jni").toFile().apply {
-                deleteOnExit()
+            // 1. Calculate a unique identifier based on JAR or CodeSource modification timestamp
+            val uniqueId = try {
+                val codeSource = JniLoader::class.java.protectionDomain.codeSource
+                val location = codeSource?.location
+                if (location != null) {
+                    val file = File(location.toURI())
+                    if (file.exists()) {
+                        "${file.name}-${file.lastModified()}"
+                    } else {
+                        "dev-default"
+                    }
+                } else {
+                    "fallback"
+                }
+            } catch (e: Exception) {
+                "error-${System.currentTimeMillis()}"
+            }
+
+            // 2. Resolve a stable temp directory to cache extracted libraries
+            val tempDir = File(System.getProperty("java.io.tmpdir"), "kpdfium-jni-$uniqueId")
+            if (!tempDir.exists()) {
+                tempDir.mkdirs()
             }
 
             val pdfiumFileName = when {
@@ -62,17 +81,30 @@ internal object JniLoader {
     }
 
     private fun extractLibrary(tempDir: File, resourceSubdir: String, fileName: String): File? {
+        val outputFile = File(tempDir, fileName)
+        
+        // 3. Skip copy if file already exists in the cache folder and is not empty
+        if (outputFile.exists() && outputFile.length() > 0) {
+            // Highly optimized! Instant load without disk write overhead.
+            return outputFile
+        }
+
         val resourcePath = "/$resourceSubdir/$fileName"
         val input: InputStream = JniLoader::class.java.getResourceAsStream(resourcePath)
             ?: JniLoader::class.java.getResourceAsStream("/$fileName") // Fallback to root resource
             ?: return null
 
-        val outputFile = File(tempDir, fileName).apply {
-            deleteOnExit()
-        }
-
-        input.use { inputStream ->
-            Files.copy(inputStream, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        try {
+            outputFile.parentFile.mkdirs()
+            input.use { inputStream ->
+                Files.copy(inputStream, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
+        } catch (e: Exception) {
+            // Clean up potentially corrupt partial copy
+            if (outputFile.exists()) {
+                outputFile.delete()
+            }
+            throw e
         }
 
         return outputFile

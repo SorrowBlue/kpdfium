@@ -1,5 +1,7 @@
 package com.sorrowblue.kpdfium
 
+import kotlinx.io.Sink
+
 /**
  * Interface representing a single rendered page from a PDF document.
  * This class implements [AutoCloseable] to ensure that native resources allocated
@@ -29,4 +31,13 @@ public interface PdfPage : AutoCloseable {
      * @return The rendered image bytes in PNG format.
      */
     public suspend fun renderToPng(scale: Float = 2.0f): ByteArray
+
+    /**
+     * Write this PDF page to Sink as a PNG image byte array.
+     *
+     * @param scale Resolution multiplier. 1.0f is standard resolution (72 DPI).
+     *              2.0f is high-resolution (144 DPI) which yields a sharper rendering.
+     * @param sink Sink
+     */
+    public suspend fun renderToPng(scale: Float = 2.0f, sink: Sink)
 }

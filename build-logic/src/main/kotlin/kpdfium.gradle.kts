@@ -138,11 +138,30 @@ fun Project.configureKmpJvm(extension: DownloadPdfiumExtension) {
 
     val compileDesktopJni = tasks.register<CompileDesktopJniTask>("compileDesktopJni") {
         group = "build"
-        description = "Compiles pdfium-jni C++ shared library locally using CMake on Windows"
+        description = "Compiles pdfium-jni C++ shared library locally using CMake"
         dependsOn(downloadDesktopPdfium)
 
         sourceDir.set(layout.projectDirectory.dir("src/cpp"))
-        outputDir.set(layout.projectDirectory.dir("src/jvmMain/resources/win32-x86-64"))
+
+        // Dynamically resolve target resources directory based on host OS and arch
+        val os = System.getProperty("os.name").lowercase()
+        val arch = System.getProperty("os.arch").lowercase()
+
+        val osDir = when {
+            os.contains("win") -> "win32"
+            os.contains("mac") || os.contains("darwin") -> "darwin"
+            os.contains("nux") -> "linux"
+            else -> throw UnsupportedOperationException("Unsupported OS: $os")
+        }
+
+        val archDir = when {
+            arch.contains("amd64") || arch.contains("x86_64") || arch.contains("x64") -> "x86-64"
+            arch.contains("aarch64") || arch.contains("arm64") -> "aarch64"
+            else -> throw UnsupportedOperationException("Unsupported architecture: $arch")
+        }
+
+        val resourceSubdir = "$osDir-$archDir" // e.g. win32-x86-64, darwin-aarch64, linux-x86-64
+        outputDir.set(layout.projectDirectory.dir("src/jvmMain/resources/$resourceSubdir"))
 
         onlyIf { extension.enableLocalCompile.get() }
     }
