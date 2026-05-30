@@ -232,7 +232,7 @@ fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
 
     // 3. Auto-link iOS cinterop compile task to pre-download setup task
     tasks.configureEach {
-        if (name.startsWith("cinteropPdfiumios")) {
+        if (name.startsWith("cinteropPdfiumIos", ignoreCase = true)) {
             dependsOn("downloadDesktopPdfium")
         }
     }
