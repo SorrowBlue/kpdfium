@@ -17,3 +17,13 @@ val reportMerge = tasks.register("reportMerge", ReportMergeTask::class) {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
     output.set(rootProject.layout.buildDirectory.file("reports/detekt/merge.sarif"))
 }
+
+tasks.register<Delete>("clean") {
+    group = "build"
+    description = "Deletes the build directory and all generated/downloaded native build files."
+    
+    delete(rootProject.layout.projectDirectory.dir("kpdfium/android/.cxx"))
+    delete(rootProject.layout.projectDirectory.dir("kpdfium/src/cpp/build"))
+    delete(rootProject.layout.projectDirectory.dir("kpdfium/src/cpp/include"))
+    delete(rootProject.layout.projectDirectory.dir("kpdfium/src/cpp/pdfium"))
+}
