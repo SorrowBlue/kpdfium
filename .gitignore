@@ -1,0 +1,24 @@
+.gradle/
+.idea/
+.cxx/
+build/
+build_ios/
+local.properties
+*.iml
+.kotlin/
+capture.png
+build_wasm/
+kotlin-js-store/
+
+# PDFium native shared dependencies and local C++ build directories
+/kpdfium/src/cpp/pdfium/
+/kpdfium/src/cpp/include/
+/kpdfium/src/cpp/build/
+/kpdfium/src/jvmMain/resources/win32-x86-64/
+/kpdfium/src/jvmMain/resources/darwin-aarch64/
+/kpdfium/src/jvmMain/resources/darwin-x86-64/
+/kpdfium/src/jvmMain/resources/linux-x86-64/
+/kpdfium/src/jvmMain/resources/linux-aarch64/
+/kpdfium/android/src/main/jniLibs/
+
+
