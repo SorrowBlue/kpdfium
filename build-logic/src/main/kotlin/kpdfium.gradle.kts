@@ -28,6 +28,7 @@ plugins.withId("com.android.application") {
 }
 plugins.withId("org.jetbrains.kotlin.multiplatform") {
     configureKmpJvm(extension)
+    configureKmpIos(extension)
 }
 
 fun Project.configureAndroidNative(extension: DownloadPdfiumExtension) {
@@ -129,8 +130,11 @@ fun Project.configureKmpJvm(extension: DownloadPdfiumExtension) {
 
         // Map includeFilters per platform classifier
         val resolvedIncludeFilters = extension.architectures.map { archList ->
-            archList.associateWith {
-                listOf("bin/*", "lib/*")
+            archList.associateWith { arch ->
+                when {
+                    arch.startsWith("ios") -> listOf("lib/libpdfium.a")
+                    else -> listOf("bin/*", "lib/*")
+                }
             }
         }
         includeFilters.set(resolvedIncludeFilters)
@@ -170,6 +174,66 @@ fun Project.configureKmpJvm(extension: DownloadPdfiumExtension) {
     tasks.configureEach {
         if (name == "jvmProcessResources") {
             dependsOn(compileDesktopJni)
+        }
+    }
+}
+
+fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
+    val kotlin = extensions.findByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>() ?: return
+
+    afterEvaluate {
+        // iOS targets check
+        val hasIos = kotlin.targets.any { it.name.startsWith("ios") }
+        if (!hasIos) return@afterEvaluate
+
+        println("kpdfium plugin: Auto-configuring iOS Native PDFium Build Graph...")
+
+        // 1. Auto-generate pdfium.def if not present
+        val cinteropDir = file("src/nativeInterop/cinterop")
+        val defFile = File(cinteropDir, "pdfium.def")
+        if (!defFile.exists()) {
+            cinteropDir.mkdirs()
+            defFile.writeText("""
+                headers = fpdfview.h
+                headerFilter = fpdf*
+                package = com.sorrowblue.kpdfium.native
+            """.trimIndent())
+            println("kpdfium plugin: Generated C-Interop definition file at ${defFile.absolutePath}")
+        }
+
+        // 2. Configure C-Interop and static linking for iOS targets
+        kotlin.targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().forEach { target ->
+            if (target.name.startsWith("ios")) {
+                // A. Configure C-Interop for headers
+                target.compilations.getByName("main") {
+                    val pdfium by cinterops.creating {
+                        defFile(project.file("src/nativeInterop/cinterop/pdfium.def"))
+                        includeDirs(extension.headersDir)
+                    }
+                }
+
+                // B. Automatically link libpdfium.a static library
+                val platformClassifier = when (target.name) {
+                    "iosX64" -> "ios-simulator-x64"
+                    "iosArm64" -> "ios-device-arm64"
+                    "iosSimulatorArm64" -> "ios-simulator-arm64"
+                    else -> null
+                }
+
+                if (platformClassifier != null) {
+                    target.binaries.all {
+                        val libDir = extension.jniLibsDir.get().dir(platformClassifier).asFile
+                        linkerOpts("-L${libDir.absolutePath}", "-lpdfium")
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Auto-link iOS cinterop compile task to pre-download setup task
+    tasks.configureEach {
+        if (name.startsWith("cinteropPdfiumios")) {
+            dependsOn("downloadDesktopPdfium")
         }
     }
 }

@@ -25,7 +25,12 @@ val platformClassifier = when {
 downloadPdfium {
     pdfiumVersion.set(libs.versions.pdfium.get())
     enableLocalCompile.set(true)
-    architectures.set(listOf(platformClassifier))
+    architectures.set(listOf(
+        platformClassifier,
+        "ios-device-arm64",
+        "ios-simulator-arm64",
+        "ios-simulator-x64"
+    ))
     jniLibsDir.set(layout.projectDirectory.dir("src/cpp/pdfium"))
     headersDir.set(layout.projectDirectory.dir("src/cpp/include"))
     buildTmpDir.set(layout.buildDirectory.dir("tmp"))
@@ -44,6 +49,11 @@ kotlin {
     }
 
     jvm()
+
+    // iOS Targets
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
 
     sourceSets {
         commonMain.dependencies {
