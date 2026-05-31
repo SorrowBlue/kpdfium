@@ -37,5 +37,5 @@ dependencyResolutionManagement {
 rootProject.name = "kpdfium-root"
 include(":kpdfium")
 include(":kpdfium:android")
+include(":sample")
 include(":sample:androidApp")
-

@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cstdint>
 #include "fpdfview.h"
 
 #ifdef __ANDROID__
@@ -52,12 +53,12 @@ int JniGetBlockCallback(void* param, unsigned long pos, unsigned char* clientBuf
     // 1. Invoke stateful seek(pos) synchronously on Kotlin SeekableSource
     env->CallVoidMethod(p->globalSourceRef, p->seekMethodId, (jlong)pos);
     if (env->ExceptionCheck()) {
-        env->ExceptionDescribe(); // LogcatにJava例外を出力
-        env->ExceptionClear();    // 例外状態をクリア
+        env->ExceptionDescribe(); // Log Java exception to stderr/logcat
+        env->ExceptionClear();    // Clear the active exception state
         if (attached) {
             g_JavaVM->DetachCurrentThread();
         }
-        return 0; // PDFiumにエラーを返して安全に終了
+        return 0; // Safely return error to PDFium
     }
     
     // 2. Allocate a local byte array and invoke read(buffer, 0, size)
@@ -221,7 +222,7 @@ JNIEXPORT void JNICALL Java_com_sorrowblue_kpdfium_PdfiumJni_FPDF_1RenderPageBit
     // Blazing-fast native rendering directly into locked bitmap memory (Zero-copy!)
     FPDF_RenderPageBitmap(fpdfBitmap, (FPDF_PAGE)pagePtr, startX, startY, sizeX, sizeY, rotate, flags);
     
-    // Swap Red and Blue channels to match Android ARGB_8888 color space (ABGR to ARGB)
+    // Swap Red and Blue channels to match Android ARGB_8888 memory layout ([B,G,R,A] to [R,G,B,A])
     uint32_t* p = (uint32_t*)pixels;
     int pixelCount = info.width * info.height;
     for (int i = 0; i < pixelCount; i++) {
@@ -251,13 +252,7 @@ JNIEXPORT void JNICALL Java_com_sorrowblue_kpdfium_PdfiumJni_FPDF_1RenderPageBit
     FPDFBitmap_FillRect(fpdfBitmap, 0, 0, targetWidth, targetHeight, 0xFFFFFFFF);
     FPDF_RenderPageBitmap(fpdfBitmap, (FPDF_PAGE)pagePtr, 0, 0, targetWidth, targetHeight, rotate, flags);
     
-    // Swap Red and Blue channels to match JVM INT_ARGB color space (ABGR to ARGB)
-    uint32_t* p = (uint32_t*)pixels;
-    int pixelCount = targetWidth * targetHeight;
-    for (int i = 0; i < pixelCount; i++) {
-        uint32_t color = p[i];
-        p[i] = (color & 0xFF00FF00) | ((color & 0x00FF0000) >> 16) | ((color & 0x000000FF) << 16);
-    }
+
     
     FPDFBitmap_Destroy(fpdfBitmap);
 }

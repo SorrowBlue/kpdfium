@@ -10,7 +10,8 @@ plugins {
     alias(libs.plugins.maven.publish) apply false
     alias(libs.plugins.kotlin.dokka) apply false
     alias(libs.plugins.detekt) apply false
-
+    alias(libs.plugins.compose.multiplatform) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
 }
 
 val reportMerge = tasks.register("reportMerge", ReportMergeTask::class) {
