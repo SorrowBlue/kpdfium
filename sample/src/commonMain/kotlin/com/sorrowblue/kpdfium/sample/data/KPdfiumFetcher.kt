@@ -34,11 +34,13 @@ fun setupCoil() {
     SingletonImageLoader.setSafe { context ->
         ImageLoader(context)
             .newBuilder()
-            .components(ComponentRegistry.Builder()
-                .apply {
-                    add(KPdfiumFetcher.Factory(), PageData::class)
-                }
-                .build())
+            .components(
+                ComponentRegistry.Builder()
+                    .apply {
+                        add(KPdfiumFetcher.Factory(), PageData::class)
+                    }
+                    .build()
+            )
             .crossfade(true)
             .build()
     }
@@ -47,7 +49,7 @@ fun setupCoil() {
 internal class KPdfiumFetcher(
     private val data: PageData,
     protected val options: Options,
-    private val diskCache: Lazy<DiskCache?>,
+    private val diskCache: Lazy<DiskCache?>
 ) : Fetcher {
     override suspend fun fetch(): FetchResult {
         var snapshot = readFromDiskCache()
@@ -75,7 +77,7 @@ internal class KPdfiumFetcher(
                 return SourceFetchResult(
                     source = snapshot.toImageSource(),
                     mimeType = "image/*",
-                    dataSource = DataSource.NETWORK,
+                    dataSource = DataSource.NETWORK
                 )
             }
 
@@ -104,7 +106,7 @@ internal class KPdfiumFetcher(
                 return SourceFetchResult(
                     source = snapshot.toImageSource(),
                     mimeType = "image/*",
-                    dataSource = DataSource.DISK,
+                    dataSource = DataSource.DISK
                 )
             }
 
@@ -113,27 +115,25 @@ internal class KPdfiumFetcher(
                 return SourceFetchResult(
                     source = snapshot.toImageSource(),
                     mimeType = "image/*",
-                    dataSource = DataSource.DISK,
+                    dataSource = DataSource.DISK
                 )
             }
         }
         return null
     }
 
-    private fun DiskCache.Snapshot.toMetadataOrNull(): PageData? {
-        return try {
-            fileSystem.source(metadata.asKotlinxPath()).buffered().use {
-                CoilMetadata.from<PageData>(it)
-            }
-        } catch (_: IOException) {
-            // If we can't parse the metadata, ignore this entry.
-            null
+    private fun DiskCache.Snapshot.toMetadataOrNull(): PageData? = try {
+        fileSystem.source(metadata.asKotlinxPath()).buffered().use {
+            CoilMetadata.from<PageData>(it)
         }
+    } catch (_: IOException) {
+        // If we can't parse the metadata, ignore this entry.
+        null
     }
 
     private suspend fun writeToDiskCache(
         snapshot: DiskCache.Snapshot?,
-        writeTo: suspend (Sink) -> Unit,
+        writeTo: suspend (Sink) -> Unit
     ): DiskCache.Snapshot? {
         // Short circuit if we're not allowed to cache this response.
         if (!options.diskCachePolicy.writeEnabled) {
@@ -163,21 +163,17 @@ internal class KPdfiumFetcher(
         }
     }
 
-    private fun DiskCache.Snapshot.toImageSource(): ImageSource {
-        return ImageSource(
-            file = data.asKotlinxPath(),
-            fileSystem = fileSystem,
-            diskCacheKey = diskCacheKey,
-            closeable = this,
-        )
-    }
+    private fun DiskCache.Snapshot.toImageSource(): ImageSource = ImageSource(
+        file = data.asKotlinxPath(),
+        fileSystem = fileSystem,
+        diskCacheKey = diskCacheKey,
+        closeable = this
+    )
 
-    private fun Source.toImageSource(): ImageSource {
-        return ImageSource(
-            source = this,
-            fileSystem = fileSystem,
-        )
-    }
+    private fun Source.toImageSource(): ImageSource = ImageSource(
+        source = this,
+        fileSystem = fileSystem
+    )
 
     private fun readFromDiskCache(): DiskCache.Snapshot? {
         if (options.diskCachePolicy.readEnabled) {
@@ -193,12 +189,7 @@ internal class KPdfiumFetcher(
         get() = SystemFileSystem
 
     class Factory : Fetcher.Factory<PageData> {
-        override fun create(
-            data: PageData,
-            options: Options,
-            imageLoader: ImageLoader
-        ): Fetcher {
-            return KPdfiumFetcher(data, options, lazy { imageLoader.diskCache })
-        }
+        override fun create(data: PageData, options: Options, imageLoader: ImageLoader): Fetcher =
+            KPdfiumFetcher(data, options, lazy { imageLoader.diskCache })
     }
 }

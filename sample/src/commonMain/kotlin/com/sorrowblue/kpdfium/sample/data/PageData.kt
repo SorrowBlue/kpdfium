@@ -7,10 +7,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable
-data class PageData(
-    val file: PlatformFile,
-    val pageIndex: Int
-) : CoilMetadata {
+data class PageData(val file: PlatformFile, val pageIndex: Int) : CoilMetadata {
     override fun writeTo(sink: Sink) {
         sink.writeString(Json.encodeToString(this))
     }

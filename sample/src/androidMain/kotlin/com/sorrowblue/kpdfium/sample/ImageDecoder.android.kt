@@ -3,10 +3,8 @@ package com.sorrowblue.kpdfium.sample
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import kotlinx.io.Sink
 import kotlinx.io.Source
 import kotlinx.io.asInputStream
-import kotlinx.io.asOutputStream
 
 actual fun ByteArray.toImageBitmap(): ImageBitmap {
     val bitmap = BitmapFactory.decodeByteArray(this, 0, size)

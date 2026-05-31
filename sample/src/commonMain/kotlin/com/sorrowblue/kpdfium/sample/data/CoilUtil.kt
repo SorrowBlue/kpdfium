@@ -29,10 +29,11 @@ internal fun DiskCache.Editor.abortQuietly() {
     } catch (_: Exception) {
     }
 }
+
 internal fun ImageSource(
     source: Source,
     fileSystem: FileSystem,
-    metadata: ImageSource.Metadata? = null,
+    metadata: ImageSource.Metadata? = null
 ): ImageSource =
     ImageSource(source.asOkioSource().buffer(), fileSystem.asOkioFileSystem(), metadata)
 
@@ -41,7 +42,7 @@ internal fun ImageSource(
     fileSystem: FileSystem,
     diskCacheKey: String? = null,
     closeable: AutoCloseable? = null,
-    metadata: ImageSource.Metadata? = null,
+    metadata: ImageSource.Metadata? = null
 ): ImageSource =
     ImageSource(file.asOkioPath(), fileSystem.asOkioFileSystem(), diskCacheKey, closeable, metadata)
 

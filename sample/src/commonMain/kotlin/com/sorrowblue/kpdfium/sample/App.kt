@@ -75,9 +75,7 @@ private fun rememberAppState(): AppState {
     return state
 }
 
-private class AppStateImpl(
-    private val coroutineScope: CoroutineScope
-) : AppState {
+private class AppStateImpl(private val coroutineScope: CoroutineScope) : AppState {
 
     private var pdfDocument: PdfDocument? = null
     lateinit var launcher: PickerResultLauncher
@@ -122,8 +120,8 @@ private class AppStateImpl(
     }
 
     fun release() {
-            pdfDocument?.close()
-            pdfDocument = null
+        pdfDocument?.close()
+        pdfDocument = null
     }
 }
 
@@ -186,7 +184,7 @@ fun App() {
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth().visible(!uiState.fileName.isNullOrEmpty())
                     .padding(bottom = 12.dp),
-                textAlign = TextAlign.Start,
+                textAlign = TextAlign.Start
             )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 1.dp)
@@ -203,7 +201,9 @@ fun App() {
                     CircularProgressIndicator()
                 } else if (uiState.errorMessage != null) {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        ),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth().padding(16.dp)
                     ) {

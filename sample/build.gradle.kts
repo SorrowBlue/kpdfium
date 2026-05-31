@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.serialization)
+    id("kioarch.detekt")
 }
 
 kotlin {
@@ -72,6 +73,10 @@ kotlin {
                 implementation(compose.desktop.currentOs)
             }
         }
+    }
+
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 }
 

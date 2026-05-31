@@ -7,9 +7,8 @@ import io.github.vinceglb.filekit.dialogs.toAndroidUri
 import java.io.FileInputStream
 import java.nio.channels.FileChannel
 
-internal actual class RealSeekableSource actual constructor(
-    private val file: PlatformFile
-) : SeekableSource {
+internal actual class RealSeekableSource actual constructor(private val file: PlatformFile) :
+    SeekableSource {
 
     private val pfd: ParcelFileDescriptor
     private val fileInputStream: FileInputStream
@@ -18,10 +17,14 @@ internal actual class RealSeekableSource actual constructor(
 
     init {
         val context = AppContext.context
-            ?: throw IllegalStateException("AppContext.context has not been initialized. Please set it in MainActivity.onCreate.")
+            ?: throw IllegalStateException(
+                "AppContext.context has not been initialized. Please set it in MainActivity.onCreate."
+            )
 
         pfd = context.contentResolver.openFileDescriptor(file.toAndroidUri(), "r")
-            ?: throw IllegalArgumentException("Failed to open file descriptor for URI: ${file.toAndroidUri()}")
+            ?: throw IllegalArgumentException(
+                "Failed to open file descriptor for URI: ${file.toAndroidUri()}"
+            )
 
         fileInputStream = FileInputStream(pfd.fileDescriptor)
         fileChannel = fileInputStream.channel
@@ -37,13 +40,9 @@ internal actual class RealSeekableSource actual constructor(
         fileChannel.position(position)
     }
 
-    override fun position(): Long {
-        return fileChannel.position()
-    }
+    override fun position(): Long = fileChannel.position()
 
-    override fun length(): Long {
-        return fileLength
-    }
+    override fun length(): Long = fileLength
 
     override fun close() {
         fileChannel.close()
