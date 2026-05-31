@@ -1,0 +1,3 @@
+headers = fpdfview.h
+headerFilter = fpdf*
+package = com.sorrowblue.kpdfium.native

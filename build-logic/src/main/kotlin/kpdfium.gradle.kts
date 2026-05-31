@@ -187,21 +187,7 @@ fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
         if (!hasIos) return@afterEvaluate
 
         println("kpdfium plugin: Auto-configuring iOS Native PDFium Build Graph...")
-
-        // 1. Auto-generate pdfium.def if not present
-        val cinteropDir = file("src/nativeInterop/cinterop")
-        val defFile = File(cinteropDir, "pdfium.def")
-        if (!defFile.exists()) {
-            cinteropDir.mkdirs()
-            defFile.writeText("""
-                headers = fpdfview.h
-                headerFilter = fpdf*
-                package = com.sorrowblue.kpdfium.native
-            """.trimIndent())
-            println("kpdfium plugin: Generated C-Interop definition file at ${defFile.absolutePath}")
-        }
-
-        // 2. Configure C-Interop and static linking for iOS targets
+        // Configure C-Interop and static linking for iOS targets
         kotlin.targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().forEach { target ->
             if (target.name.startsWith("ios")) {
                 // A. Configure C-Interop for headers
@@ -230,7 +216,7 @@ fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
         }
     }
 
-    // 3. Auto-link iOS cinterop compile task to pre-download setup task
+    // Auto-link iOS cinterop compile task to pre-download setup task
     tasks.configureEach {
         if (name.startsWith("cinteropPdfiumIos", ignoreCase = true)) {
             dependsOn("downloadDesktopPdfium")
