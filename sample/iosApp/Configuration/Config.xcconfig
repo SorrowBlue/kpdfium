@@ -1,0 +1,9 @@
+TEAM_ID=
+
+PRODUCT_NAME=Kpdfium
+PRODUCT_BUNDLE_IDENTIFIER=com.sorrowblue.kpdfium.sample.KpdfiumSample$(TEAM_ID)
+
+CURRENT_PROJECT_VERSION=1
+MARKETING_VERSION=1.0
+
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @executable_path

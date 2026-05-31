@@ -16,7 +16,9 @@ public actual object PdfExtractor {
         withContext(Dispatchers.IO) {
             val docPtr = PdfiumJni.FPDF_LoadCustomDocument(source, source.length(), null)
             if (docPtr == 0L) {
-                throw IllegalArgumentException("Failed to parse PDF document via native JNI FPDF_FILEACCESS Android")
+                throw IllegalArgumentException(
+                    "Failed to parse PDF document via native JNI FPDF_FILEACCESS Android"
+                )
             }
             AndroidPdfDocument(docPtr, source)
         }

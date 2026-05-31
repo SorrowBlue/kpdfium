@@ -20,6 +20,5 @@ public expect object PdfExtractor {
  * @param pdfBytes The binary contents of the PDF file.
  * @return The [PdfDocument] instance representing the parsed PDF.
  */
-public suspend fun PdfExtractor.openDocument(pdfBytes: ByteArray): PdfDocument {
-    return openDocument(ByteArraySeekableSource(pdfBytes))
-}
+public suspend fun PdfExtractor.openDocument(pdfBytes: ByteArray): PdfDocument =
+    openDocument(ByteArraySeekableSource(pdfBytes))

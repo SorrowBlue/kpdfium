@@ -2,53 +2,66 @@ package com.sorrowblue.kpdfium.sample
 
 import com.sorrowblue.kpdfium.SeekableSource
 import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.startAccessingSecurityScopedResource
+import io.github.vinceglb.filekit.stopAccessingSecurityScopedResource
+import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.refTo
-import platform.Foundation.NSFileHandle
-import platform.Foundation.fileHandleForReadingFromURL
-import platform.Foundation.seekToOffset
-import platform.Foundation.readDataOfLength
-import platform.Foundation.closeFile
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.usePinned
+import platform.posix.*
+import platform.Foundation.NSURL
 
+@OptIn(ExperimentalForeignApi::class)
 internal actual class RealSeekableSource actual constructor(
     private val file: PlatformFile
 ) : SeekableSource {
 
-    private val fileHandle: NSFileHandle = NSFileHandle.fileHandleForReadingFromURL(file.nsurl, null)
-        ?: throw IllegalArgumentException("Failed to open NSFileHandle for URL: ${file.nsurl}")
+    private val nsUrl: NSURL = file.nsUrl
+    private val isSecurityScoped: Boolean = file.startAccessingSecurityScopedResource()
 
+    private val filePtr: CPointer<FILE>?
     private val fileLength: Long
 
     init {
-        val current = fileHandle.offsetInFile
-        val end = fileHandle.seekToEndOfFile()
-        fileHandle.seekToOffset(current, null)
-        fileLength = end.toLong()
+        val path = nsUrl.path ?: run {
+            if (isSecurityScoped) {
+                file.stopAccessingSecurityScopedResource()
+            }
+            throw IllegalArgumentException("Failed to resolve path from NSURL")
+        }
+
+        filePtr = fopen(path, "rb") ?: run {
+            if (isSecurityScoped) {
+                file.stopAccessingSecurityScopedResource()
+            }
+            throw IllegalArgumentException("Failed to open file: $path (errno = ${errno})")
+        }
+
+        val fp = filePtr
+        fseek(fp, 0, SEEK_END)
+        fileLength = ftell(fp).toLong()
+        fseek(fp, 0, SEEK_SET)
     }
 
-    @OptIn(ExperimentalForeignApi::class)
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-        val data = fileHandle.readDataOfLength(length.toULong())
-        if (data.length == 0UL) return -1
-        
-        val bytes = data.bytes
-        if (bytes != null) {
-            platform.ffi.memcpy(
-                buffer.refTo(offset),
-                bytes,
-                data.length
-            )
-            return data.length.toInt()
+        val fp = filePtr ?: return -1
+        val readBytes = buffer.usePinned { pinned ->
+            fread(pinned.addressOf(offset), 1UL, length.toULong(), fp)
         }
-        return -1
+        if (readBytes == 0UL) {
+            return if (feof(fp) != 0) -1 else 0
+        }
+        return readBytes.toInt()
     }
 
     override fun seek(position: Long) {
-        fileHandle.seekToOffset(position.toULong(), null)
+        val fp = filePtr ?: return
+        fseek(fp, position, SEEK_SET)
     }
 
     override fun position(): Long {
-        return fileHandle.offsetInFile.toLong()
+        val fp = filePtr ?: return 0L
+        return ftell(fp).toLong()
     }
 
     override fun length(): Long {
@@ -56,6 +69,12 @@ internal actual class RealSeekableSource actual constructor(
     }
 
     override fun close() {
-        fileHandle.closeFile()
+        try {
+            filePtr?.let { fclose(it) }
+        } finally {
+            if (isSecurityScoped) {
+                file.stopAccessingSecurityScopedResource()
+            }
+        }
     }
 }

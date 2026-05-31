@@ -2,12 +2,12 @@ package com.sorrowblue.kpdfium
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.io.Sink
 import kotlinx.io.asOutputStream
-import java.io.ByteArrayOutputStream
 
 internal class AndroidPdfPage(
     private val document: AndroidPdfDocument,
@@ -16,7 +16,9 @@ internal class AndroidPdfPage(
 ) : PdfPage {
     private val pagePtr: Long = PdfiumJni.FPDF_LoadPage(docPtr, pageIndex).also {
         if (it == 0L) {
-            throw IllegalArgumentException("Failed to load PDF page at index $pageIndex. The document might be corrupted or the page index is invalid.")
+            throw IllegalArgumentException(
+                "Failed to load PDF page at index $pageIndex. The document might be corrupted or the page index is invalid."
+            )
         }
     }
 
@@ -36,9 +38,12 @@ internal class AndroidPdfPage(
             PdfiumJni.FPDF_RenderPageBitmap(
                 pagePtr = pagePtr,
                 bitmap = bitmap,
-                startX = 0, startY = 0,
-                sizeX = targetWidth, sizeY = targetHeight,
-                rotate = 0, flags = 0
+                startX = 0,
+                startY = 0,
+                sizeX = targetWidth,
+                sizeY = targetHeight,
+                rotate = 0,
+                flags = 0
             )
 
             // Compress bitmap to PNG byte array
@@ -63,9 +68,12 @@ internal class AndroidPdfPage(
             PdfiumJni.FPDF_RenderPageBitmap(
                 pagePtr = pagePtr,
                 bitmap = bitmap,
-                startX = 0, startY = 0,
-                sizeX = targetWidth, sizeY = targetHeight,
-                rotate = 0, flags = 0
+                startX = 0,
+                startY = 0,
+                sizeX = targetWidth,
+                sizeY = targetHeight,
+                rotate = 0,
+                flags = 0
             )
 
             // Compress bitmap to PNG byte array

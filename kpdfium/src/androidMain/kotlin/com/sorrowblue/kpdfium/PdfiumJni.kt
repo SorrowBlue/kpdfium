@@ -43,8 +43,11 @@ internal object PdfiumJni {
     external fun FPDF_RenderPageBitmap(
         pagePtr: Long,
         bitmap: Bitmap,
-        startX: Int, startY: Int,
-        sizeX: Int, sizeY: Int,
-        rotate: Int, flags: Int
+        startX: Int,
+        startY: Int,
+        sizeX: Int,
+        sizeY: Int,
+        rotate: Int,
+        flags: Int
     )
 }

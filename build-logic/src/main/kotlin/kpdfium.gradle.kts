@@ -132,7 +132,7 @@ fun Project.configureKmpJvm(extension: DownloadPdfiumExtension) {
         val resolvedIncludeFilters = extension.architectures.map { archList ->
             archList.associateWith { arch ->
                 when {
-                    arch.startsWith("ios") -> listOf("lib/libpdfium.a")
+                    arch.startsWith("ios") -> listOf("lib/libpdfium.dylib")
                     else -> listOf("bin/*", "lib/*")
                 }
             }

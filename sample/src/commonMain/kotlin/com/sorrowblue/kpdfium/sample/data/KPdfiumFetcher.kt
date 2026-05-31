@@ -9,14 +9,13 @@ import coil3.disk.DiskCache
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.SourceFetchResult
-import coil3.key.Keyer
 import coil3.request.Options
 import coil3.request.crossfade
-import coil3.size.Precision
 import com.sorrowblue.kpdfium.PdfDocument
 import com.sorrowblue.kpdfium.PdfExtractor
 import com.sorrowblue.kpdfium.sample.RealSeekableSource
 import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.io.Buffer
@@ -26,9 +25,8 @@ import kotlinx.io.Source
 import kotlinx.io.buffered
 import kotlinx.io.files.FileSystem
 import kotlinx.io.files.SystemFileSystem
-import kotlin.reflect.KClass
 
-private var path: String? = null
+private var path: PlatformFile? = null
 private var pdfDocument: PdfDocument? = null
 private val mutex = Mutex()
 
@@ -61,10 +59,10 @@ internal class KPdfiumFetcher(
             }
 
             mutex.withLock {
-                if (path != data.path || pdfDocument == null) {
-                    path = data.path
+                if (path != data.file || pdfDocument == null) {
+                    path = data.file
                     pdfDocument =
-                        PdfExtractor.openDocument(RealSeekableSource(PlatformFile(data.path)))
+                        PdfExtractor.openDocument(RealSeekableSource(data.file))
                 }
             }
 
@@ -91,6 +89,7 @@ internal class KPdfiumFetcher(
                 dataSource = DataSource.NETWORK
             )
         } catch (e: Exception) {
+            println(e.message.orEmpty())
             snapshot?.closeQuietly()
             throw e
         }
@@ -188,7 +187,7 @@ internal class KPdfiumFetcher(
         }
     }
 
-    val diskCacheKey: String = data.path
+    val diskCacheKey: String = data.file.path
 
     private val fileSystem: FileSystem
         get() = SystemFileSystem

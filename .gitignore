@@ -21,4 +21,16 @@ kotlin-js-store/
 /kpdfium/src/jvmMain/resources/linux-aarch64/
 /kpdfium/android/src/main/jniLibs/
 
+## User settings
+xcuserdata/
 
+### Xcode ###
+
+## Xcode 8 and earlier
+
+### Xcode Patch ###
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata

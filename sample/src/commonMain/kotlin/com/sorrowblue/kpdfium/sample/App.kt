@@ -42,12 +42,12 @@ import androidx.compose.ui.unit.sp
 import com.sorrowblue.kpdfium.PdfDocument
 import com.sorrowblue.kpdfium.PdfExtractor
 import com.sorrowblue.kpdfium.sample.data.PageData
+import com.sorrowblue.kpdfium.sample.data.setupCoil
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.PickerResultLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.name
-import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -92,29 +92,28 @@ private class AppStateImpl(
     fun onResult(file: PlatformFile?) {
         uiState = AppUiState(isLoading = true)
 
-        // Close previous document if open
-        pdfDocument?.close()
-        pdfDocument = null
-
-        if (file == null) {
-            uiState = AppUiState(isLoading = false, errorMessage = "Please select pdf file")
-            return
-        }
-
         coroutineScope.launch {
+            pdfDocument?.close()
+            pdfDocument = null
+
+            if (file == null) {
+                uiState = AppUiState(isLoading = false, errorMessage = "Please select pdf file")
+                return@launch
+            }
+
             try {
                 uiState = uiState.copy(fileName = file.name)
                 val doc = PdfExtractor.openDocument(RealSeekableSource(file))
                 pdfDocument = doc
                 pages.clear()
-                pages.addAll(List(doc.pageCount) { PageData(file.path, it) })
+                pages.addAll(List(doc.pageCount) { PageData(file, it) })
                 uiState = uiState.copy(pageCount = doc.pageCount)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 e.printStackTrace()
                 uiState = uiState.copy(
-                    errorMessage = e.localizedMessage ?: e.message ?: "Failed to open PDF document."
+                    errorMessage = e.message ?: "Failed to open PDF document."
                 )
             } finally {
                 uiState = uiState.copy(isLoading = false)
@@ -123,8 +122,8 @@ private class AppStateImpl(
     }
 
     fun release() {
-        pdfDocument?.close()
-        pdfDocument = null
+            pdfDocument?.close()
+            pdfDocument = null
     }
 }
 
@@ -137,6 +136,7 @@ data class AppUiState(
 
 @Composable
 fun App() {
+    remember { setupCoil() }
     val state = rememberAppState()
     val uiState = state.uiState
 

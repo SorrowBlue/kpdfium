@@ -9,7 +9,6 @@ import com.sorrowblue.kpdfium.sample.data.setupCoil
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setupCoil()
         AppContext.context = applicationContext
         enableEdgeToEdge()
         setContent {

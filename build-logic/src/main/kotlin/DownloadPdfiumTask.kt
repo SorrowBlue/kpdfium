@@ -69,7 +69,7 @@ abstract class DownloadPdfiumTask : DefaultTask() {
             // Resolve check file name dynamically based on OS platform classifier
             val checkFileName = when {
                 classifier.contains("android") -> "libpdfium.so"
-                classifier.contains("ios") -> "lib/libpdfium.a"
+                classifier.contains("ios") -> "libpdfium.dylib"
                 classifier.contains("win") -> "pdfium.dll"
                 classifier.contains("mac") -> "libpdfium.dylib"
                 else -> "libpdfium.so"
