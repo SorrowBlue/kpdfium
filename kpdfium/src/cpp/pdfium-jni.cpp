@@ -94,6 +94,13 @@ JNIEXPORT jlong JNICALL Java_com_sorrowblue_kpdfium_PdfiumJni_FPDF_1LoadCustomDo
     param->seekMethodId = env->GetMethodID(sourceClass, "seek", "(J)V");
     param->readMethodId = env->GetMethodID(sourceClass, "read", "([BII)I");
     
+    if (!param->seekMethodId || !param->readMethodId) {
+        env->DeleteGlobalRef(param->globalSourceRef);
+        env->DeleteGlobalRef(param->sourceClass);
+        delete param;
+        return 0;
+    }
+    
     // Initialize PDFium FPDF_FILEACCESS
     FPDF_FILEACCESS* fileAccess = (FPDF_FILEACCESS*)malloc(sizeof(FPDF_FILEACCESS));
     fileAccess->m_FileLen = (unsigned long)length;

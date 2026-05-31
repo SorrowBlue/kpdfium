@@ -32,6 +32,11 @@ android {
             // Compile for all major Android architectures
             abiFilters.addAll(setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
         }
+        externalNativeBuild {
+            cmake {
+                arguments("-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384")
+            }
+        }
     }
 
     ndkVersion = "29.0.14206865"
