@@ -3,6 +3,8 @@ package com.sorrowblue.kpdfium
 
 import kotlinx.cinterop.*
 import com.sorrowblue.kpdfium.native.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 internal class IosPdfDocument(
     private val docPtr: FPDF_DOCUMENT,
@@ -10,15 +12,16 @@ internal class IosPdfDocument(
     private val stableRef: StableRef<SeekableSource>,
     private val fileAccess: CPointer<FPDF_FILEACCESS>
 ) : PdfDocument {
+    internal val mutex = Mutex()
     
     override val pageCount: Int
         get() = FPDF_GetPageCount(docPtr)
 
-    override suspend fun getPage(pageIndex: Int): PdfPage {
+    override suspend fun getPage(pageIndex: Int): PdfPage = mutex.withLock {
         if (pageIndex < 0 || pageIndex >= pageCount) {
             throw IndexOutOfBoundsException("Page index $pageIndex is out of bounds (0 ..< $pageCount)")
         }
-        return IosPdfPage(docPtr, pageIndex)
+        IosPdfPage(this, docPtr, pageIndex)
     }
 
     override fun close() {

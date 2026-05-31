@@ -51,14 +51,47 @@ int JniGetBlockCallback(void* param, unsigned long pos, unsigned char* clientBuf
     
     // 1. Invoke stateful seek(pos) synchronously on Kotlin SeekableSource
     env->CallVoidMethod(p->globalSourceRef, p->seekMethodId, (jlong)pos);
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe(); // LogcatにJava例外を出力
+        env->ExceptionClear();    // 例外状態をクリア
+        if (attached) {
+            g_JavaVM->DetachCurrentThread();
+        }
+        return 0; // PDFiumにエラーを返して安全に終了
+    }
     
     // 2. Allocate a local byte array and invoke read(buffer, 0, size)
     jbyteArray buffer = env->NewByteArray(size);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        if (attached) {
+            g_JavaVM->DetachCurrentThread();
+        }
+        return 0;
+    }
+    
     jint bytesRead = env->CallIntMethod(p->globalSourceRef, p->readMethodId, buffer, 0, (jint)size);
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        env->DeleteLocalRef(buffer);
+        if (attached) {
+            g_JavaVM->DetachCurrentThread();
+        }
+        return 0;
+    }
     
     if (bytesRead > 0) {
         // Copy Java byte array contents back directly into PDFium C clientBuf pointer
         jbyte* body = env->GetByteArrayElements(buffer, nullptr);
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+            env->DeleteLocalRef(buffer);
+            if (attached) {
+                g_JavaVM->DetachCurrentThread();
+            }
+            return 0;
+        }
         memcpy(clientBuf, body, bytesRead);
         env->ReleaseByteArrayElements(buffer, body, JNI_ABORT);
     }
@@ -101,7 +134,7 @@ JNIEXPORT jlong JNICALL Java_com_sorrowblue_kpdfium_PdfiumJni_FPDF_1LoadCustomDo
         return 0;
     }
     
-    // Initialize PDFium FPDF_FILEACCESS
+    // Initialize PDFium FPDF_FILEACCESS using standard native layout
     FPDF_FILEACCESS* fileAccess = (FPDF_FILEACCESS*)malloc(sizeof(FPDF_FILEACCESS));
     fileAccess->m_FileLen = (unsigned long)length;
     fileAccess->m_GetBlock = JniGetBlockCallback;
@@ -188,6 +221,14 @@ JNIEXPORT void JNICALL Java_com_sorrowblue_kpdfium_PdfiumJni_FPDF_1RenderPageBit
     // Blazing-fast native rendering directly into locked bitmap memory (Zero-copy!)
     FPDF_RenderPageBitmap(fpdfBitmap, (FPDF_PAGE)pagePtr, startX, startY, sizeX, sizeY, rotate, flags);
     
+    // Swap Red and Blue channels to match Android ARGB_8888 color space (ABGR to ARGB)
+    uint32_t* p = (uint32_t*)pixels;
+    int pixelCount = info.width * info.height;
+    for (int i = 0; i < pixelCount; i++) {
+        uint32_t color = p[i];
+        p[i] = (color & 0xFF00FF00) | ((color & 0x00FF0000) >> 16) | ((color & 0x000000FF) << 16);
+    }
+    
     FPDFBitmap_Destroy(fpdfBitmap);
     AndroidBitmap_unlockPixels(env, bitmap); // Release native pixel lock
 }
@@ -209,6 +250,14 @@ JNIEXPORT void JNICALL Java_com_sorrowblue_kpdfium_PdfiumJni_FPDF_1RenderPageBit
     
     FPDFBitmap_FillRect(fpdfBitmap, 0, 0, targetWidth, targetHeight, 0xFFFFFFFF);
     FPDF_RenderPageBitmap(fpdfBitmap, (FPDF_PAGE)pagePtr, 0, 0, targetWidth, targetHeight, rotate, flags);
+    
+    // Swap Red and Blue channels to match JVM INT_ARGB color space (ABGR to ARGB)
+    uint32_t* p = (uint32_t*)pixels;
+    int pixelCount = targetWidth * targetHeight;
+    for (int i = 0; i < pixelCount; i++) {
+        uint32_t color = p[i];
+        p[i] = (color & 0xFF00FF00) | ((color & 0x00FF0000) >> 16) | ((color & 0x000000FF) << 16);
+    }
     
     FPDFBitmap_Destroy(fpdfBitmap);
 }
