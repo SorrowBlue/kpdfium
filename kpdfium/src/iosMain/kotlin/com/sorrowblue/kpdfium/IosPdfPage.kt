@@ -31,7 +31,7 @@ internal class IosPdfPage(
 
     override suspend fun render(dpi: Int, format: ImageFormat, quality: Int): ByteArray = document.mutex.withLock {
         require(dpi > 0) { "DPI must be greater than 0" }
-        require(quality in 0..100) { "Quality must be between 0 and 100" }
+        require(quality in 0..QUALITY_MAX) { "Quality must be between 0 and 100" }
         withContext(Dispatchers.IO) {
             val scale = dpi / 72.0f
             val targetWidth = (width * scale).toInt()

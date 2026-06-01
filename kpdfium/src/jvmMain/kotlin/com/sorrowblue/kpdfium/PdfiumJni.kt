@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
  * JNI bindings for PDFium on JVM.
  * These methods link directly to the native `pdfium` and `pdfium-jni` libraries.
  */
+@Suppress("FunctionNaming")
 internal object PdfiumJni {
     init {
         JniLoader.load()

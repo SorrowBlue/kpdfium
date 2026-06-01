@@ -1,6 +1,7 @@
 package com.sorrowblue.kpdfium
 
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -12,7 +13,7 @@ internal object JniLoader {
     fun load() {
         if (isLoaded) return
 
-        try {
+        runCatching {
             val os = System.getProperty("os.name").lowercase()
             val arch = System.getProperty("os.arch").lowercase()
 
@@ -24,13 +25,17 @@ internal object JniLoader {
             }
 
             val archDir = when {
-                arch.contains("amd64") || arch.contains("x86_64") || arch.contains("x64") -> "x86-64"
+                arch.contains(
+                    "amd64"
+                ) || arch.contains("x86_64") || arch.contains("x64") -> "x86-64"
+
                 arch.contains("aarch64") || arch.contains("arm64") -> "aarch64"
+
                 else -> throw UnsupportedOperationException("Unsupported architecture: $arch")
             }
 
             val resourceSubdir = "$osDir-$archDir"
-            
+
             // 1. Calculate a unique identifier based on JAR or CodeSource modification timestamp
             val uniqueId = try {
                 val codeSource = JniLoader::class.java.protectionDomain.codeSource
@@ -66,7 +71,7 @@ internal object JniLoader {
 
             val pdfiumTempFile = extractLibrary(tempDir, resourceSubdir, pdfiumFileName)
             val jniTempFile = extractLibrary(tempDir, resourceSubdir, jniFileName)
-                ?: throw java.io.IOException("Failed to find and extract JNI bridge library: $jniFileName")
+                ?: throw IOException("Failed to find and extract JNI bridge library: $jniFileName")
 
             // On Windows, the JNI bridge DLL depends on pdfium.dll. Load pdfium first.
             if (pdfiumTempFile != null) {
@@ -75,14 +80,15 @@ internal object JniLoader {
             System.load(jniTempFile.absolutePath)
 
             isLoaded = true
-        } catch (e: Throwable) {
-            throw UnsatisfiedLinkError("Failed to load native PDFium libraries: ${e.message}").initCause(e)
+        }.onFailure { e ->
+            throw UnsatisfiedLinkError("Failed to load native PDFium libraries: ${e.message}")
+                .initCause(e)
         }
     }
 
     private fun extractLibrary(tempDir: File, resourceSubdir: String, fileName: String): File? {
         val outputFile = File(tempDir, fileName)
-        
+
         // 3. Skip copy if file already exists in the cache folder and is not empty
         if (outputFile.exists() && outputFile.length() > 0) {
             // Highly optimized! Instant load without disk write overhead.

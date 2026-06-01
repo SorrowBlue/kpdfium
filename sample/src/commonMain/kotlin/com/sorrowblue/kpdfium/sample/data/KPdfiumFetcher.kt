@@ -13,13 +13,7 @@ import coil3.request.Options
 import coil3.request.crossfade
 import com.sorrowblue.kpdfium.DPI_STANDARD
 import com.sorrowblue.kpdfium.ImageFormat
-import com.sorrowblue.kpdfium.PdfDocument
-import com.sorrowblue.kpdfium.PdfExtractor
-import com.sorrowblue.kpdfium.sample.RealSeekableSource
-import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.path
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.io.Buffer
 import kotlinx.io.IOException
 import kotlinx.io.Sink
@@ -27,10 +21,6 @@ import kotlinx.io.Source
 import kotlinx.io.buffered
 import kotlinx.io.files.FileSystem
 import kotlinx.io.files.SystemFileSystem
-
-private var path: PlatformFile? = null
-private var pdfDocument: PdfDocument? = null
-private val mutex = Mutex()
 
 fun setupCoil() {
     SingletonImageLoader.setSafe { context ->
@@ -55,24 +45,20 @@ internal class KPdfiumFetcher(
 ) : Fetcher {
     override suspend fun fetch(): FetchResult {
         var snapshot = readFromDiskCache()
-        try {
+        runCatching {
             // Fast path: fetch the image from the disk cache without performing a network request.
             val result = fastPath(snapshot)
             if (result != null) {
                 return result
             }
 
-            mutex.withLock {
-                if (path != data.file || pdfDocument == null) {
-                    path = data.file
-                    pdfDocument =
-                        PdfExtractor.openDocument(RealSeekableSource(data.file))
-                }
-            }
+            val document = getPdfDocument(options.context, data.file)
 
             snapshot =
                 writeToDiskCache(snapshot = snapshot) { sink ->
-                    pdfDocument!!.getPage(data.pageIndex).render(dpi = DPI_STANDARD, format = ImageFormat.JPEG, sink = sink)
+                    document.getPage(data.pageIndex).use {
+                        it.render(dpi = DPI_STANDARD, format = ImageFormat.JPEG, sink = sink)
+                    }
                 }
 
             if (snapshot != null) {
@@ -84,19 +70,20 @@ internal class KPdfiumFetcher(
             }
 
             // 新しいスナップショットの読み取りに失敗した場合は、応答本文が空でない場合はそれを読み取ります。
-            val source = Buffer().also {
-                pdfDocument!!.getPage(data.pageIndex).render(dpi = DPI_STANDARD, format = ImageFormat.JPEG, sink = it)
+            val source = Buffer().also { sink ->
+                document.getPage(data.pageIndex).use {
+                    it.render(dpi = DPI_STANDARD, format = ImageFormat.JPEG, sink = sink)
+                }
             }
             return SourceFetchResult(
                 source = source.toImageSource(),
                 mimeType = null,
                 dataSource = DataSource.NETWORK
             )
-        } catch (e: Exception) {
-            println(e.message.orEmpty())
+        }.onFailure {
+            println("KPdfiumFetcher fetch error: " + it.message.orEmpty())
             snapshot?.closeQuietly()
-            throw e
-        }
+        }.getOrThrow()
     }
 
     private fun fastPath(snapshot: DiskCache.Snapshot?): SourceFetchResult? {
@@ -151,7 +138,7 @@ internal class KPdfiumFetcher(
         } ?: return null
 
         // Write the network request metadata and the network response body to disk.
-        try {
+        runCatching {
             fileSystem.sink(editor.metadata.asKotlinxPath()).buffered().use {
                 data.writeTo(it)
             }
@@ -159,10 +146,9 @@ internal class KPdfiumFetcher(
                 writeTo(it)
             }
             return editor.commitAndOpenSnapshot()
-        } catch (e: Exception) {
+        }.onFailure {
             editor.abortQuietly()
-            throw e
-        }
+        }.getOrThrow()
     }
 
     private fun DiskCache.Snapshot.toImageSource(): ImageSource = ImageSource(
@@ -177,13 +163,12 @@ internal class KPdfiumFetcher(
         fileSystem = fileSystem
     )
 
-    private fun readFromDiskCache(): DiskCache.Snapshot? {
+    private fun readFromDiskCache(): DiskCache.Snapshot? =
         if (options.diskCachePolicy.readEnabled) {
-            return diskCache.value?.openSnapshot(diskCacheKey)
+            diskCache.value?.openSnapshot(diskCacheKey)
         } else {
-            return null
+            null
         }
-    }
 
     val diskCacheKey: String = data.file.path
 

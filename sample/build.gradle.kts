@@ -53,6 +53,7 @@ kotlin {
                 api(projects.kpdfium)
                 implementation("org.jetbrains.compose.runtime:runtime:1.12.0-alpha01")
                 implementation("org.jetbrains.compose.material3:material3:1.12.0-alpha01")
+                implementation("org.jetbrains.compose.ui:ui-tooling-preview:1.12.0-alpha01")
                 implementation("io.github.vinceglb:filekit-dialogs-compose:0.14.1")
                 implementation("io.coil-kt.coil3:coil-compose:3.4.0")
                 implementation(libs.kotlinx.coroutines.core)
@@ -78,6 +79,10 @@ kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
+}
+
+dependencies {
+    androidRuntimeClasspath("org.jetbrains.compose.ui:ui-tooling:1.12.0-alpha01")
 }
 
 compose.desktop {

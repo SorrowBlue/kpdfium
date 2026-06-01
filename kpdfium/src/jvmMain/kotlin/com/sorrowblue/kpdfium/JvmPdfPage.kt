@@ -1,16 +1,14 @@
 package com.sorrowblue.kpdfium
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import kotlinx.io.Sink
-import kotlinx.io.asOutputStream
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferInt
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.imageio.ImageIO
+import kotlinx.coroutines.sync.withLock
+import kotlinx.io.Sink
+import kotlinx.io.asOutputStream
 
 internal class JvmPdfPage(
     private val document: JvmPdfDocument,
@@ -19,17 +17,19 @@ internal class JvmPdfPage(
 ) : PdfPage {
     private val pagePtr: Long = PdfiumJni.FPDF_LoadPage(docPtr, pageIndex).also {
         if (it == 0L) {
-            throw IllegalArgumentException("Failed to load PDF page at index $pageIndex. The document might be corrupted or the page index is invalid.")
+            throw IllegalArgumentException(
+                "Failed to load PDF page at index $pageIndex. The document might be corrupted or the page index is invalid."
+            )
         }
     }
 
     override val width: Int get() = PdfiumJni.FPDF_GetPageWidthF(pagePtr).toInt()
     override val height: Int get() = PdfiumJni.FPDF_GetPageHeightF(pagePtr).toInt()
 
-    override suspend fun render(dpi: Int, format: ImageFormat, quality: Int): ByteArray = document.mutex.withLock {
-        require(dpi > 0) { "DPI must be greater than 0" }
-        require(quality in 0..100) { "Quality must be between 0 and 100" }
-        withContext(Dispatchers.IO) {
+    override suspend fun render(dpi: Int, format: ImageFormat, quality: Int): ByteArray =
+        document.mutex.withLock {
+            require(dpi > 0) { "DPI must be greater than 0" }
+            require(quality in 0..QUALITY_MAX) { "Quality must be between 0 and 100" }
             val scale = dpi / 72.0f
             val targetWidth = (width * scale).toInt()
             val targetHeight = (height * scale).toInt()
@@ -52,7 +52,11 @@ internal class JvmPdfPage(
             )
 
             // 3. Construct BufferedImage directly from the ByteBuffer pixels (Zero-copy pixel transfer)
-            val bufferedImage = BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB)
+            val bufferedImage = BufferedImage(
+                targetWidth,
+                targetHeight,
+                BufferedImage.TYPE_INT_ARGB
+            )
 
             // Fast buffer copy using DataBufferInt
             val pixels = (bufferedImage.raster.dataBuffer as DataBufferInt).data
@@ -64,12 +68,11 @@ internal class JvmPdfPage(
             writeToStream(bufferedImage, format, quality, baos)
             baos.toByteArray()
         }
-    }
 
-    override suspend fun render(dpi: Int, format: ImageFormat, quality: Int, sink: Sink): Unit = document.mutex.withLock {
-        require(dpi > 0) { "DPI must be greater than 0" }
-        require(quality in 0..100) { "Quality must be between 0 and 100" }
-        withContext(Dispatchers.IO) {
+    override suspend fun render(dpi: Int, format: ImageFormat, quality: Int, sink: Sink): Unit =
+        document.mutex.withLock {
+            require(dpi > 0) { "DPI must be greater than 0" }
+            require(quality in 0..100) { "Quality must be between 0 and 100" }
             val scale = dpi / 72.0f
             val targetWidth = (width * scale).toInt()
             val targetHeight = (height * scale).toInt()
@@ -103,13 +106,18 @@ internal class JvmPdfPage(
             // 4. Compress BufferedImage into Sink
             writeToStream(bufferedImage, format, quality, sink.asOutputStream())
         }
-    }
 
-    private fun writeToStream(bufferedImage: BufferedImage, format: ImageFormat, quality: Int, outputStream: java.io.OutputStream) {
+    private fun writeToStream(
+        bufferedImage: BufferedImage,
+        format: ImageFormat,
+        quality: Int,
+        outputStream: java.io.OutputStream
+    ) {
         when (format) {
             ImageFormat.PNG -> {
                 ImageIO.write(bufferedImage, "png", outputStream)
             }
+
             ImageFormat.JPEG -> {
                 val writers = ImageIO.getImageWritersByFormatName("jpeg")
                 if (!writers.hasNext()) {
@@ -119,13 +127,18 @@ internal class JvmPdfPage(
                 val writeParam = writer.defaultWriteParam
                 writeParam.compressionMode = javax.imageio.ImageWriteParam.MODE_EXPLICIT
                 writeParam.compressionQuality = quality / 100.0f
-                
-                javax.imageio.ImageIO.createImageOutputStream(outputStream).use { ios ->
+
+                ImageIO.createImageOutputStream(outputStream).use { ios ->
                     writer.output = ios
-                    writer.write(null, javax.imageio.IIOImage(bufferedImage, null, null), writeParam)
+                    writer.write(
+                        null,
+                        javax.imageio.IIOImage(bufferedImage, null, null),
+                        writeParam
+                    )
                 }
                 writer.dispose()
             }
+
             ImageFormat.WEBP -> {
                 throw UnsupportedOperationException("WEBP format is not supported on JVM platform")
             }

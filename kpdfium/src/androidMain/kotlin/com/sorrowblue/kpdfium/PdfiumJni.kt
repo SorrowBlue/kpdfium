@@ -6,6 +6,7 @@ import android.graphics.Bitmap
  * JNI bindings for PDFium on Android.
  * These methods link directly to the native `libpdfium.so` library.
  */
+@Suppress("FunctionNaming")
 internal object PdfiumJni {
     init {
         // Loads the native C++ PDFium library AND the compiled JNI bridge.
@@ -40,6 +41,7 @@ internal object PdfiumJni {
      * Renders a PDF page directly into an Android Bitmap's raw memory buffer using Android NDK's
      * `AndroidBitmap_lockPixels` (Zero-copy, extremely high-performance!).
      */
+    @Suppress("LongParameterList")
     external fun FPDF_RenderPageBitmap(
         pagePtr: Long,
         bitmap: Bitmap,

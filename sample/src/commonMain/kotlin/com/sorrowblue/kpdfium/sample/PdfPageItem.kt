@@ -31,15 +31,15 @@ internal fun PdfPageItem(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxSize(), // Expand to cover the Pager slot entirely
+        modifier = modifier.fillMaxSize()
+            .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
+                .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {

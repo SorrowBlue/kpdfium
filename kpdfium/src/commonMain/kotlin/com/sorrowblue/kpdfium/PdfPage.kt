@@ -14,6 +14,9 @@ public const val DPI_VERY_HIGH: Int = 300
 /** Ultra high resolution (600 DPI). Suitable for high-quality printing. */
 public const val DPI_ULTRA: Int = 600
 
+/** Minimum quality for lossy formats (0%). */
+public const val QUALITY_MAX: Int = 100
+
 /**
  * Interface representing a single rendered page from a PDF document.
  * This class implements [AutoCloseable] to ensure that native resources allocated
@@ -48,7 +51,7 @@ public interface PdfPage : AutoCloseable {
     public suspend fun render(
         dpi: Int = DPI_HIGH,
         format: ImageFormat = ImageFormat.PNG,
-        quality: Int = 100
+        quality: Int = QUALITY_MAX
     ): ByteArray
 
     /**
@@ -64,7 +67,7 @@ public interface PdfPage : AutoCloseable {
     public suspend fun render(
         dpi: Int = DPI_HIGH,
         format: ImageFormat = ImageFormat.PNG,
-        quality: Int = 100,
+        quality: Int = QUALITY_MAX,
         sink: Sink
     )
 }

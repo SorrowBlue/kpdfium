@@ -2,10 +2,10 @@ package com.sorrowblue.kpdfium.sample
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import kotlinx.io.Source
-import kotlinx.io.asInputStream
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
+import kotlinx.io.Source
+import kotlinx.io.asInputStream
 
 actual fun ByteArray.toImageBitmap(): ImageBitmap {
     val image = ImageIO.read(ByteArrayInputStream(this))

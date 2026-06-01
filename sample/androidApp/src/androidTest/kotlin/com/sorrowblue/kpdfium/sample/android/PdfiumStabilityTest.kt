@@ -40,7 +40,7 @@ class PdfiumStabilityTest {
                         repeat(10) { repeatIndex ->
                             // Concurrent call to getPage and renderToPng
                             document.getPage(0).use { page ->
-                                val bytes = page.renderToPng(scale = 1.0f)
+                                val bytes = page.render()
                                 assertNotNull("Rendered page bytes should not be null", bytes)
                             }
                         }
