@@ -65,6 +65,7 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(project(":kpdfium:android"))
+            implementation(libs.androidx.core.ktx)
         }
     }
 

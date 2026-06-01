@@ -57,6 +57,6 @@ internal interface CoilMetadata {
 
     companion object {
         inline fun <reified T : CoilMetadata> from(source: Source) =
-            Json.decodeFromString<T>(source.readString())
+            runCatching { Json.decodeFromString<T>(source.readString()) }.getOrNull()
     }
 }

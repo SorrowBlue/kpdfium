@@ -11,6 +11,8 @@ import coil3.fetch.Fetcher
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
 import coil3.request.crossfade
+import com.sorrowblue.kpdfium.DPI_STANDARD
+import com.sorrowblue.kpdfium.ImageFormat
 import com.sorrowblue.kpdfium.PdfDocument
 import com.sorrowblue.kpdfium.PdfExtractor
 import com.sorrowblue.kpdfium.sample.RealSeekableSource
@@ -70,7 +72,7 @@ internal class KPdfiumFetcher(
 
             snapshot =
                 writeToDiskCache(snapshot = snapshot) { sink ->
-                    pdfDocument!!.getPage(data.pageIndex).renderToPng(scale = 1.5f, sink = sink)
+                    pdfDocument!!.getPage(data.pageIndex).render(dpi = DPI_STANDARD, format = ImageFormat.JPEG, sink = sink)
                 }
 
             if (snapshot != null) {
@@ -83,7 +85,7 @@ internal class KPdfiumFetcher(
 
             // 新しいスナップショットの読み取りに失敗した場合は、応答本文が空でない場合はそれを読み取ります。
             val source = Buffer().also {
-                pdfDocument!!.getPage(data.pageIndex).renderToPng(scale = 1.5f, sink = it)
+                pdfDocument!!.getPage(data.pageIndex).render(dpi = DPI_STANDARD, format = ImageFormat.JPEG, sink = it)
             }
             return SourceFetchResult(
                 source = source.toImageSource(),

@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.sync.withLock
 import kotlinx.io.Sink
 import kotlinx.io.asOutputStream
+import androidx.core.graphics.createBitmap
 
 internal class AndroidPdfPage(
     private val document: AndroidPdfDocument,
@@ -23,12 +24,16 @@ internal class AndroidPdfPage(
     override val width: Int get() = PdfiumJni.FPDF_GetPageWidthF(pagePtr).toInt()
     override val height: Int get() = PdfiumJni.FPDF_GetPageHeightF(pagePtr).toInt()
 
-    override suspend fun renderToPng(scale: Float): ByteArray = document.mutex.withLock {
+    override suspend fun render(dpi: Int, format: ImageFormat, quality: Int): ByteArray = document.mutex.withLock {
+        require(dpi > 0) { "DPI must be greater than 0" }
+        require(quality in 0..100) { "Quality must be between 0 and 100" }
+
+        val scale = dpi / 72.0f
         val targetWidth = (width * scale).toInt()
         val targetHeight = (height * scale).toInt()
 
         // Create an ARGB_8888 Bitmap representing the canvas
-        val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(targetWidth, targetHeight)
         bitmap.eraseColor(Color.WHITE)
 
         // Render directly into the Bitmap's raw memory via NDK C++ (Zero-copy!)
@@ -43,20 +48,30 @@ internal class AndroidPdfPage(
             flags = 0
         )
 
-        // Compress bitmap to PNG byte array
+        val compressFormat = when (format) {
+            ImageFormat.PNG -> Bitmap.CompressFormat.PNG
+            ImageFormat.JPEG -> Bitmap.CompressFormat.JPEG
+            ImageFormat.WEBP -> Bitmap.CompressFormat.WEBP_LOSSY
+        }
+
+        // Compress bitmap to byte array
         val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        bitmap.compress(compressFormat, quality, outputStream)
         bitmap.recycle()
 
         outputStream.toByteArray()
     }
 
-    override suspend fun renderToPng(scale: Float, sink: Sink): Unit = document.mutex.withLock {
+    override suspend fun render(dpi: Int, format: ImageFormat, quality: Int, sink: Sink): Unit = document.mutex.withLock {
+        require(dpi > 0) { "DPI must be greater than 0" }
+        require(quality in 0..100) { "Quality must be between 0 and 100" }
+
+        val scale = dpi / 72.0f
         val targetWidth = (width * scale).toInt()
         val targetHeight = (height * scale).toInt()
 
         // Create an ARGB_8888 Bitmap representing the canvas
-        val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(targetWidth, targetHeight)
         bitmap.eraseColor(Color.WHITE)
 
         // Render directly into the Bitmap's raw memory via NDK C++ (Zero-copy!)
@@ -71,8 +86,14 @@ internal class AndroidPdfPage(
             flags = 0
         )
 
-        // Compress bitmap to PNG byte array
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, sink.asOutputStream())
+        val compressFormat = when (format) {
+            ImageFormat.PNG -> Bitmap.CompressFormat.PNG
+            ImageFormat.JPEG -> Bitmap.CompressFormat.JPEG
+            ImageFormat.WEBP -> Bitmap.CompressFormat.WEBP_LOSSY
+        }
+
+        // Compress bitmap to Sink
+        bitmap.compress(compressFormat, quality, sink.asOutputStream())
         bitmap.recycle()
     }
 

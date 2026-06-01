@@ -29,8 +29,11 @@ internal class IosPdfPage(
     override val height: Int 
         get() = FPDF_GetPageHeightF(pagePtr).toInt()
 
-    override suspend fun renderToPng(scale: Float): ByteArray = document.mutex.withLock {
+    override suspend fun render(dpi: Int, format: ImageFormat, quality: Int): ByteArray = document.mutex.withLock {
+        require(dpi > 0) { "DPI must be greater than 0" }
+        require(quality in 0..100) { "Quality must be between 0 and 100" }
         withContext(Dispatchers.IO) {
+            val scale = dpi / 72.0f
             val targetWidth = (width * scale).toInt()
             val targetHeight = (height * scale).toInt()
 
@@ -77,16 +80,46 @@ internal class IosPdfPage(
                     intent = CGColorRenderingIntent.kCGRenderingIntentDefault
                 ) ?: throw IllegalStateException("Failed to create CGImage")
 
-                // 3. Compress CGImage into PNG CFData
+                // 3. Compress CGImage into CFData
                 val mutableData = CFDataCreateMutable(null, 0)
                     ?: throw IllegalStateException("Failed to create CFData")
                 
-                val pngType = CFStringCreateWithCString(null, "public.png", kCFStringEncodingUTF8)
-                    ?: throw IllegalStateException("Failed to create UTType PNG string")
+                val utiType: CFStringRef
+                val options: CFMutableDictionaryRef?
 
-                val destination = CGImageDestinationCreateWithData(mutableData, pngType, 1UL, null)
+                when (format) {
+                    ImageFormat.PNG -> {
+                        utiType = CFStringCreateWithCString(null, "public.png", kCFStringEncodingUTF8)
+                            ?: throw IllegalStateException("Failed to create UTType PNG string")
+                        options = null
+                    }
+                    ImageFormat.JPEG -> {
+                        utiType = CFStringCreateWithCString(null, "public.jpeg", kCFStringEncodingUTF8)
+                            ?: throw IllegalStateException("Failed to create UTType JPEG string")
+                        options = CFDictionaryCreateMutable(null, 1, null, null)
+                        memScoped {
+                            val qualityVar = alloc<FloatVar>()
+                            qualityVar.value = quality / 100.0f
+                            val qualityNum = CFNumberCreate(null, kCFNumberFloatType, qualityVar.ptr)
+                            if (qualityNum != null) {
+                                CFDictionarySetValue(options, kCGImageDestinationLossyCompressionQuality, qualityNum)
+                                CFRelease(qualityNum)
+                            }
+                        }
+                    }
+                    ImageFormat.WEBP -> {
+                        CFRelease(mutableData)
+                        CGImageRelease(cgImage)
+                        CGColorSpaceRelease(colorSpace)
+                        CGDataProviderRelease(dataProvider)
+                        throw UnsupportedOperationException("WEBP format is not supported on iOS platform")
+                    }
+                }
+
+                val destination = CGImageDestinationCreateWithData(mutableData, utiType, 1UL, null)
                 if (destination == null) {
-                    CFRelease(pngType)
+                    CFRelease(utiType)
+                    if (options != null) CFRelease(options)
                     CFRelease(mutableData)
                     CGImageRelease(cgImage)
                     CGColorSpaceRelease(colorSpace)
@@ -94,7 +127,7 @@ internal class IosPdfPage(
                     throw IllegalStateException("Failed to create CGImageDestination")
                 }
 
-                CGImageDestinationAddImage(destination, cgImage, null)
+                CGImageDestinationAddImage(destination, cgImage, options)
                 val finalizeSuccess = CGImageDestinationFinalize(destination)
 
                 val result: ByteArray
@@ -112,7 +145,8 @@ internal class IosPdfPage(
                 }
 
                 // Cleanup resources
-                CFRelease(pngType)
+                CFRelease(utiType)
+                if (options != null) CFRelease(options)
                 CFRelease(mutableData)
                 CFRelease(destination)
                 CGImageRelease(cgImage)
@@ -126,8 +160,8 @@ internal class IosPdfPage(
         }
     }
 
-    override suspend fun renderToPng(scale: Float, sink: Sink) {
-        val bytes = renderToPng(scale)
+    override suspend fun render(dpi: Int, format: ImageFormat, quality: Int, sink: Sink) {
+        val bytes = render(dpi, format, quality)
         sink.write(bytes)
     }
 

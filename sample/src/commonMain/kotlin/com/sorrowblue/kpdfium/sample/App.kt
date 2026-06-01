@@ -22,7 +22,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,11 +33,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.sorrowblue.kpdfium.PdfDocument
 import com.sorrowblue.kpdfium.PdfExtractor
 import com.sorrowblue.kpdfium.sample.data.PageData
@@ -239,101 +239,21 @@ fun App() {
             }
 
             // Bottom controls for rapid page navigation
-            if (uiState.pageCount > 0) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // 1. Current Page of Total Pages Indicator
-                    Text(
-                        text = "Page ${state.pagerState.currentPage + 1} of ${uiState.pageCount}",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    val coroutineScope = rememberCoroutineScope()
-                    // 2. Horizontal Slider for rapid page scrubbing
-                    Slider(
-                        value = state.pagerState.currentPage.toFloat(),
-                        onValueChange = { newValue ->
-                            coroutineScope.launch {
-                                state.pagerState.scrollToPage(newValue.toInt())
-                            }
-                        },
-                        valueRange = 0f..(uiState.pageCount - 1).coerceAtLeast(1).toFloat(),
-                        steps = if (uiState.pageCount > 2) uiState.pageCount - 2 else 0,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-    }
-}
-
-data class PdfPageState(
-    val image: ImageBitmap? = null,
-    val isLoading: Boolean = true,
-    val error: String? = null
-)
-
-@Composable
-fun PdfPageItem(
-    data: PageData?,
-    isLoading: Boolean,
-    error: String?,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxSize(), // Expand to cover the Pager slot entirely
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Page ${data?.pageIndex?.plus(1)}",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
-
-            Box(
+            val coroutineScope = rememberCoroutineScope()
+            BottomNavigation(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f), // Let the box occupy remaining space, centering the image
-                contentAlignment = Alignment.Center
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(36.dp))
-                } else if (data != null) {
-                    coil3.compose.AsyncImage(
-                        model = data,
-                        contentDescription = "Page ${data.pageIndex + 1}"
-                    )
-                } else if (error != null) {
-                    Text(
-                        text = "Error rendering page: $error",
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 12.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 16.dp)
+                    .visible(uiState.pageCount > 0),
+                currentPage = state.pagerState.currentPage,
+                pageCount = uiState.pageCount,
+                onValueChange = {
+                    coroutineScope.launch {
+                        state.pagerState.scrollToPage(it)
+                    }
                 }
-            }
+            )
         }
     }
 }

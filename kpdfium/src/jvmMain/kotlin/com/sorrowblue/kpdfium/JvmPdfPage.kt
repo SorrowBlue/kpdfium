@@ -26,8 +26,11 @@ internal class JvmPdfPage(
     override val width: Int get() = PdfiumJni.FPDF_GetPageWidthF(pagePtr).toInt()
     override val height: Int get() = PdfiumJni.FPDF_GetPageHeightF(pagePtr).toInt()
 
-    override suspend fun renderToPng(scale: Float): ByteArray = document.mutex.withLock {
+    override suspend fun render(dpi: Int, format: ImageFormat, quality: Int): ByteArray = document.mutex.withLock {
+        require(dpi > 0) { "DPI must be greater than 0" }
+        require(quality in 0..100) { "Quality must be between 0 and 100" }
         withContext(Dispatchers.IO) {
+            val scale = dpi / 72.0f
             val targetWidth = (width * scale).toInt()
             val targetHeight = (height * scale).toInt()
 
@@ -56,15 +59,18 @@ internal class JvmPdfPage(
             val intBuffer = byteBuffer.asIntBuffer()
             intBuffer.get(pixels)
 
-            // 4. Compress BufferedImage into standard PNG bytes
+            // 4. Compress BufferedImage into byte array
             val baos = ByteArrayOutputStream()
-            ImageIO.write(bufferedImage, "png", baos)
+            writeToStream(bufferedImage, format, quality, baos)
             baos.toByteArray()
         }
     }
 
-    override suspend fun renderToPng(scale: Float, sink: Sink): Unit = document.mutex.withLock {
+    override suspend fun render(dpi: Int, format: ImageFormat, quality: Int, sink: Sink): Unit = document.mutex.withLock {
+        require(dpi > 0) { "DPI must be greater than 0" }
+        require(quality in 0..100) { "Quality must be between 0 and 100" }
         withContext(Dispatchers.IO) {
+            val scale = dpi / 72.0f
             val targetWidth = (width * scale).toInt()
             val targetHeight = (height * scale).toInt()
 
@@ -94,8 +100,35 @@ internal class JvmPdfPage(
             val intBuffer = byteBuffer.asIntBuffer()
             intBuffer.get(pixels)
 
-            // 4. Compress BufferedImage into standard PNG bytes
-            ImageIO.write(bufferedImage, "png", sink.asOutputStream())
+            // 4. Compress BufferedImage into Sink
+            writeToStream(bufferedImage, format, quality, sink.asOutputStream())
+        }
+    }
+
+    private fun writeToStream(bufferedImage: BufferedImage, format: ImageFormat, quality: Int, outputStream: java.io.OutputStream) {
+        when (format) {
+            ImageFormat.PNG -> {
+                ImageIO.write(bufferedImage, "png", outputStream)
+            }
+            ImageFormat.JPEG -> {
+                val writers = ImageIO.getImageWritersByFormatName("jpeg")
+                if (!writers.hasNext()) {
+                    throw IllegalStateException("No JPEG writers found")
+                }
+                val writer = writers.next()
+                val writeParam = writer.defaultWriteParam
+                writeParam.compressionMode = javax.imageio.ImageWriteParam.MODE_EXPLICIT
+                writeParam.compressionQuality = quality / 100.0f
+                
+                javax.imageio.ImageIO.createImageOutputStream(outputStream).use { ios ->
+                    writer.output = ios
+                    writer.write(null, javax.imageio.IIOImage(bufferedImage, null, null), writeParam)
+                }
+                writer.dispose()
+            }
+            ImageFormat.WEBP -> {
+                throw UnsupportedOperationException("WEBP format is not supported on JVM platform")
+            }
         }
     }
 
