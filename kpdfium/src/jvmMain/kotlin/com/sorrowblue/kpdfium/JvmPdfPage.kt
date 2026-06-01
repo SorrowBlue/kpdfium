@@ -117,6 +117,20 @@ internal class JvmPdfPage(
             }
 
             ImageFormat.JPEG -> {
+                val rgbImage = BufferedImage(
+                    bufferedImage.width,
+                    bufferedImage.height,
+                    BufferedImage.TYPE_INT_RGB
+                )
+                val g = rgbImage.createGraphics()
+                try {
+                    g.color = java.awt.Color.WHITE
+                    g.fillRect(0, 0, rgbImage.width, rgbImage.height)
+                    g.drawImage(bufferedImage, 0, 0, null)
+                } finally {
+                    g.dispose()
+                }
+
                 val writers = ImageIO.getImageWritersByFormatName("jpeg")
                 check(writers.hasNext()) { "No JPEG writers found" }
                 val writer = writers.next()
@@ -128,7 +142,7 @@ internal class JvmPdfPage(
                     writer.output = ios
                     writer.write(
                         null,
-                        javax.imageio.IIOImage(bufferedImage, null, null),
+                        javax.imageio.IIOImage(rgbImage, null, null),
                         writeParam
                     )
                 }

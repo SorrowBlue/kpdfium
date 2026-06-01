@@ -108,7 +108,7 @@ internal fun ErrorCard(errorMessage: String?) {
     }
 }
 
-@Suppress("MagicNumber")
+@Suppress("MagicNumber", "UnusedPrivateFunction")
 @Preview
 @Composable
 private fun AppScreenPreview(@PreviewParameter(AppUiStateProvider::class) uiState: AppUiState) {

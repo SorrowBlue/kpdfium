@@ -53,17 +53,7 @@ abstract class CompileDesktopJniTask : DefaultTask() {
         }
 
         // 3. Resolve library filenames based on OS
-        val (jniLibName, pdfiumLibName) = when {
-            os.contains("win") -> "pdfium-jni.dll" to "pdfium.dll"
-
-            os.contains(
-                "mac"
-            ) || os.contains("darwin") -> "libpdfium-jni.dylib" to "libpdfium.dylib"
-
-            os.contains("nux") -> "libpdfium-jni.so" to "libpdfium.so"
-
-            else -> throw UnsupportedOperationException("Unsupported OS: $os")
-        }
+        val (jniLibName, pdfiumLibName) = getJniAndPdfiumLibNames(os)
 
         // 4. Resolve generated JNI library file location
         val generatedJniFile = when {
@@ -76,33 +66,7 @@ abstract class CompileDesktopJniTask : DefaultTask() {
             generatedJniFile.copyTo(destJni, overwrite = true)
 
             // Resolve correct precompiled platform classifier folder
-            val platformClassifier = when {
-                os.contains("win") -> "win-x64"
-
-                os.contains("mac") || os.contains("darwin") -> {
-                    if (arch.contains(
-                            "aarch64"
-                        ) || arch.contains("arm64")
-                    ) {
-                            "mac-arm64"
-                        } else {
-                            "mac-x64"
-                        }
-                }
-
-                os.contains("nux") -> {
-                    if (arch.contains(
-                            "aarch64"
-                        ) || arch.contains("arm64")
-                    ) {
-                            "linux-arm64"
-                        } else {
-                            "linux-x64"
-                        }
-                }
-
-                else -> throw UnsupportedOperationException("Unsupported OS: $os")
-            }
+            val platformClassifier = getPlatformClassifier(os, arch)
 
             val originalPdfium = File(src, "pdfium/$platformClassifier/$pdfiumLibName")
             if (originalPdfium.exists()) {
@@ -114,5 +78,34 @@ abstract class CompileDesktopJniTask : DefaultTask() {
                 "Failed to find generated JNI library at: ${generatedJniFile.absolutePath}"
             )
         }
+    }
+
+    private fun getJniAndPdfiumLibNames(os: String): Pair<String, String> = when {
+        os.contains("win") -> "pdfium-jni.dll" to "pdfium.dll"
+        os.contains("mac") || os.contains("darwin") -> "libpdfium-jni.dylib" to "libpdfium.dylib"
+        os.contains("nux") -> "libpdfium-jni.so" to "libpdfium.so"
+        else -> throw UnsupportedOperationException("Unsupported OS: $os")
+    }
+
+    private fun getPlatformClassifier(os: String, arch: String): String = when {
+        os.contains("win") -> "win-x64"
+
+        os.contains("mac") || os.contains("darwin") -> {
+            if (arch.contains("aarch64") || arch.contains("arm64")) {
+                "mac-arm64"
+            } else {
+                "mac-x64"
+            }
+        }
+
+        os.contains("nux") -> {
+            if (arch.contains("aarch64") || arch.contains("arm64")) {
+                "linux-arm64"
+            } else {
+                "linux-x64"
+            }
+        }
+
+        else -> throw UnsupportedOperationException("Unsupported OS: $os")
     }
 }

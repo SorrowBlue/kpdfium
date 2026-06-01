@@ -63,89 +63,120 @@ abstract class DownloadPdfiumTask : DefaultTask() {
         }
 
         classifiersList.forEachIndexed { index, classifier ->
-            val destDir = outputDirs.get()[classifier]
-                ?: throw GradleException(
-                    "Output directory not specified for classifier: $classifier"
-                )
-            val includes = includeFilters.get()[classifier] ?: emptyList()
-
-            // Resolve check file name dynamically based on OS platform classifier
-            val checkFileName = when {
-                classifier.contains("android") -> "libpdfium.so"
-                classifier.contains("ios") -> "libpdfium.dylib"
-                classifier.contains("win") -> "pdfium.dll"
-                classifier.contains("mac") -> "libpdfium.dylib"
-                else -> "libpdfium.so"
-            }
-            val checkFile = File(destDir, checkFileName)
-            val versionFile = File(destDir, ".pdfium-version")
-
-            // Perform deterministic local caching check based on requested version
-            val isUpToDate = checkFile.exists() &&
-                versionFile.exists() &&
-                versionFile.readText().trim() == version
-
-            if (isUpToDate) {
-                println(
-                    "PDFium binaries for $classifier ($version) already exist and are up-to-date. Skipping download."
-                )
-                return@forEachIndexed
-            }
-
-            val encodedVersion = version.replace("/", "%2F")
-            val urlString = "https://github.com/bblanchon/pdfium-binaries/releases/download/$encodedVersion/pdfium-$classifier.tgz"
-            val tarFile = File(buildTmp, "pdfium-$classifier.tgz")
-            tarFile.parentFile.mkdirs()
-
-            try {
-                URI(urlString).toURL().openStream().use { input: InputStream ->
-                    tarFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-
-                println("Extracting $classifier binaries into ${destDir.absolutePath}...")
-                fileSystemOperations.copy {
-                    from(archiveOperations.tarTree(archiveOperations.gzip(tarFile))) {
-                        includes.forEach { include(it) }
-                        eachFile {
-                            path = name
-                        }
-                    }
-                    into(destDir)
-                }
-
-                // Extract shared headers if enabled, it's the first target (to prevent duplicated extraction), and destination exists
-                if (extractHeaders.get() && headersDest != null && index == 0) {
-                    println(
-                        "Extracting official PDFium C headers into ${headersDest.absolutePath}..."
-                    )
-                    fileSystemOperations.copy {
-                        from(archiveOperations.tarTree(archiveOperations.gzip(tarFile))) {
-                            include("include/*.h")
-                            eachFile {
-                                path = name
-                            }
-                        }
-                        into(headersDest)
-                    }
-                }
-
-                // Save version metadata after successful extraction
-                versionFile.parentFile.mkdirs()
-                versionFile.writeText(version)
-                println("Successfully saved version metadata for $classifier: $version")
-            } finally {
-                tarFile.delete()
-
-                // Safe cleanup of temporary empty directories created by Gradle copy task
-                File(destDir, "bin").delete()
-                File(destDir, "lib").delete()
-                if (headersDest != null) {
-                    File(headersDest, "include").delete()
-                }
-            }
+            downloadAndExtractClassifier(index, classifier, version, buildTmp, headersDest)
         }
         println("PDFium download and extraction completed successfully!")
+    }
+
+    private fun downloadAndExtractClassifier(
+        index: Int,
+        classifier: String,
+        version: String,
+        buildTmp: File,
+        headersDest: File?
+    ) {
+        val destDir = outputDirs.get()[classifier]
+            ?: throw GradleException(
+                "Output directory not specified for classifier: $classifier"
+            )
+
+        if (isPdfiumUpToDate(classifier, destDir, version)) {
+            println(
+                "PDFium binaries for $classifier ($version) already exist and are up-to-date. Skipping download."
+            )
+            return
+        }
+
+        val tarFile = File(buildTmp, "pdfium-$classifier.tgz")
+        tarFile.parentFile.mkdirs()
+
+        try {
+            downloadTarFile(classifier, version, tarFile)
+            extractAndSaveMetadata(index, classifier, version, tarFile, headersDest)
+        } finally {
+            tarFile.delete()
+            cleanupTempDirs(destDir, headersDest)
+        }
+    }
+
+    private fun isPdfiumUpToDate(classifier: String, destDir: File, version: String): Boolean {
+        val checkFileName = when {
+            classifier.contains("android") -> "libpdfium.so"
+            classifier.contains("ios") -> "libpdfium.dylib"
+            classifier.contains("win") -> "pdfium.dll"
+            classifier.contains("mac") -> "libpdfium.dylib"
+            else -> "libpdfium.so"
+        }
+        val checkFile = File(destDir, checkFileName)
+        val versionFile = File(destDir, ".pdfium-version")
+        return checkFile.exists() &&
+            versionFile.exists() &&
+            versionFile.readText().trim() == version
+    }
+
+    private fun downloadTarFile(classifier: String, version: String, tarFile: File) {
+        val encodedVersion = version.replace("/", "%2F")
+        val urlString = "https://github.com/bblanchon/pdfium-binaries/releases/download/$encodedVersion/pdfium-$classifier.tgz"
+        URI(urlString).toURL().openStream().use { input: InputStream ->
+            tarFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+    }
+
+    private fun extractAndSaveMetadata(
+        index: Int,
+        classifier: String,
+        version: String,
+        tarFile: File,
+        headersDest: File?
+    ) {
+        val destDir = outputDirs.get()[classifier]
+            ?: throw GradleException(
+                "Output directory not specified for classifier: $classifier"
+            )
+        val includes = includeFilters.get()[classifier].orEmpty()
+
+        println("Extracting $classifier binaries into ${destDir.absolutePath}...")
+        fileSystemOperations.copy {
+            from(archiveOperations.tarTree(archiveOperations.gzip(tarFile))) {
+                includes.forEach { include(it) }
+                eachFile {
+                    path = name
+                }
+            }
+            into(destDir)
+        }
+
+        // Extract shared headers if enabled, it's the first target (to prevent duplicated extraction), and destination exists
+        if (extractHeaders.get() && headersDest != null && index == 0) {
+            println(
+                "Extracting official PDFium C headers into ${headersDest.absolutePath}..."
+            )
+            fileSystemOperations.copy {
+                from(archiveOperations.tarTree(archiveOperations.gzip(tarFile))) {
+                    include("include/*.h")
+                    eachFile {
+                        path = name
+                    }
+                }
+                into(headersDest)
+            }
+        }
+
+        // Save version metadata after successful extraction
+        val versionFile = File(destDir, ".pdfium-version")
+        versionFile.parentFile.mkdirs()
+        versionFile.writeText(version)
+        println("Successfully saved version metadata for $classifier: $version")
+    }
+
+    private fun cleanupTempDirs(destDir: File, headersDest: File?) {
+        // Safe cleanup of temporary empty directories created by Gradle copy task
+        File(destDir, "bin").delete()
+        File(destDir, "lib").delete()
+        if (headersDest != null) {
+            File(headersDest, "include").delete()
+        }
     }
 }

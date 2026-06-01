@@ -45,69 +45,72 @@ fun Project.configureAndroidNative(extension: DownloadPdfiumExtension) {
         extractHeaders.set(true)
 
         // Map architectures: "arm" -> "android-arm"
-        val resolvedClassifiers = extension.architectures.map { archList ->
-            archList.map { arch ->
-                when (arch) {
-                    "arm" -> "android-arm"
-                    "arm64" -> "android-arm64"
-                    "x86" -> "android-x86"
-                    "x64" -> "android-x64"
-                    else -> arch
-                }
-            }
-        }
-        classifiers.set(resolvedClassifiers)
+        classifiers.set(extension.architectures.map { resolveClassifiers(it) })
 
         // Map outputDirs per architecture
-        val resolvedOutputDirs = extension.architectures.zip(
-            extension.jniLibsDir
-        ) { archList, jniDir ->
-            archList.associate { arch ->
-                val classifier = when (arch) {
-                    "arm" -> "android-arm"
-                    "arm64" -> "android-arm64"
-                    "x86" -> "android-x86"
-                    "x64" -> "android-x64"
-                    else -> arch
-                }
-                val abiDirName = when (arch) {
-                    "arm", "android-arm" -> "armeabi-v7a"
-                    "arm64", "android-arm64" -> "arm64-v8a"
-                    "x86", "android-x86" -> "x86"
-                    "x64", "android-x64" -> "x86_64"
-                    else -> arch
-                }
-                classifier to jniDir.dir(abiDirName).asFile
+        outputDirs.set(
+            extension.architectures.zip(extension.jniLibsDir) { archList, jniDir ->
+                resolveOutputDirs(archList, jniDir)
             }
-        }
-        outputDirs.set(resolvedOutputDirs)
+        )
 
         // Map includeFilters per architecture
-        val resolvedIncludeFilters = extension.architectures.map { archList ->
-            archList.associate { arch ->
-                val classifier = when (arch) {
-                    "arm" -> "android-arm"
-                    "arm64" -> "android-arm64"
-                    "x86" -> "android-x86"
-                    "x64" -> "android-x64"
-                    else -> arch
-                }
-                classifier to listOf("lib/libpdfium.so")
-            }
-        }
-        includeFilters.set(resolvedIncludeFilters)
+        includeFilters.set(extension.architectures.map { resolveIncludeFilters(it) })
     }
 
     // Auto-link NDK CMake build to our download task
     tasks.configureEach {
-        if (name.startsWith("configureCMake") ||
-            name.startsWith("buildCMake") ||
-            (name.startsWith("merge") && name.endsWith("JniLibFolders"))
-        ) {
+        val isCMakeTask = name.startsWith("configureCMake") || name.startsWith("buildCMake")
+        val isMergeJniTask = name.startsWith("merge") && name.endsWith("JniLibFolders")
+        if (isCMakeTask || isMergeJniTask) {
             dependsOn(downloadAndExtractPdfium)
         }
     }
 }
+
+private fun resolveClassifiers(architectures: List<String>): List<String> =
+    architectures.map { arch ->
+        when (arch) {
+            "arm" -> "android-arm"
+            "arm64" -> "android-arm64"
+            "x86" -> "android-x86"
+            "x64" -> "android-x64"
+            else -> arch
+        }
+    }
+
+private fun resolveOutputDirs(
+    architectures: List<String>,
+    jniDir: org.gradle.api.file.Directory
+): Map<String, File> = architectures.associate { arch ->
+    val classifier = when (arch) {
+        "arm" -> "android-arm"
+        "arm64" -> "android-arm64"
+        "x86" -> "android-x86"
+        "x64" -> "android-x64"
+        else -> arch
+    }
+    val abiDirName = when (arch) {
+        "arm", "android-arm" -> "armeabi-v7a"
+        "arm64", "android-arm64" -> "arm64-v8a"
+        "x86", "android-x86" -> "x86"
+        "x64", "android-x64" -> "x86_64"
+        else -> arch
+    }
+    classifier to jniDir.dir(abiDirName).asFile
+}
+
+private fun resolveIncludeFilters(architectures: List<String>): Map<String, List<String>> =
+    architectures.associate { arch ->
+        val classifier = when (arch) {
+            "arm" -> "android-arm"
+            "arm64" -> "android-arm64"
+            "x86" -> "android-x86"
+            "x64" -> "android-x64"
+            else -> arch
+        }
+        classifier to listOf("lib/libpdfium.so")
+    }
 
 fun Project.configureKmpJvm(extension: DownloadPdfiumExtension) {
     println("kpdfium plugin: Auto-configuring JVM Desktop Native PDFium Build Graph...")
@@ -156,18 +159,8 @@ fun Project.configureKmpJvm(extension: DownloadPdfiumExtension) {
         val os = System.getProperty("os.name").lowercase()
         val arch = System.getProperty("os.arch").lowercase()
 
-        val osDir = when {
-            os.contains("win") -> "win32"
-            os.contains("mac") || os.contains("darwin") -> "darwin"
-            os.contains("nux") -> "linux"
-            else -> throw UnsupportedOperationException("Unsupported OS: $os")
-        }
-
-        val archDir = when {
-            arch.contains("amd64") || arch.contains("x86_64") || arch.contains("x64") -> "x86-64"
-            arch.contains("aarch64") || arch.contains("arm64") -> "aarch64"
-            else -> throw UnsupportedOperationException("Unsupported architecture: $arch")
-        }
+        val osDir = getOsDir(os)
+        val archDir = getArchDir(arch)
 
         val resourceSubdir = "$osDir-$archDir" // e.g. win32-x86-64, darwin-aarch64, linux-x86-64
         outputDir.set(layout.projectDirectory.dir("src/jvmMain/resources/$resourceSubdir"))
@@ -181,6 +174,19 @@ fun Project.configureKmpJvm(extension: DownloadPdfiumExtension) {
             dependsOn(compileDesktopJni)
         }
     }
+}
+
+private fun getOsDir(os: String): String = when {
+    os.contains("win") -> "win32"
+    os.contains("mac") || os.contains("darwin") -> "darwin"
+    os.contains("nux") -> "linux"
+    else -> throw UnsupportedOperationException("Unsupported OS: $os")
+}
+
+private fun getArchDir(arch: String): String = when {
+    arch.contains("amd64") || arch.contains("x86_64") || arch.contains("x64") -> "x86-64"
+    arch.contains("aarch64") || arch.contains("arm64") -> "aarch64"
+    else -> throw UnsupportedOperationException("Unsupported architecture: $arch")
 }
 
 fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
@@ -201,6 +207,7 @@ fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
             if (target.name.startsWith("ios")) {
                 // A. Configure C-Interop for headers
                 target.compilations.getByName("main") {
+                    @Suppress("UnusedVariable")
                     val pdfium by cinterops.creating {
                         defFile(project.file("src/nativeInterop/cinterop/pdfium.def"))
                         includeDirs(extension.headersDir)
