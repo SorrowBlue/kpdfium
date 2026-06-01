@@ -33,10 +33,11 @@ plugins.withId("org.jetbrains.kotlin.multiplatform") {
 
 fun Project.configureAndroidNative(extension: DownloadPdfiumExtension) {
     println("kpdfium plugin: Auto-configuring Android Native PDFium Build Graph...")
-    
+
     val downloadAndExtractPdfium = tasks.register<DownloadPdfiumTask>("downloadAndExtractPdfium") {
         group = "setup"
-        description = "Downloads and extracts precompiled PDFium binaries and headers from bblanchon/pdfium-binaries"
+        description =
+            "Downloads and extracts precompiled PDFium binaries and headers from bblanchon/pdfium-binaries"
 
         pdfiumVersion.set(extension.pdfiumVersion)
         buildTmpDir.set(extension.buildTmpDir)
@@ -58,7 +59,9 @@ fun Project.configureAndroidNative(extension: DownloadPdfiumExtension) {
         classifiers.set(resolvedClassifiers)
 
         // Map outputDirs per architecture
-        val resolvedOutputDirs = extension.architectures.zip(extension.jniLibsDir) { archList, jniDir ->
+        val resolvedOutputDirs = extension.architectures.zip(
+            extension.jniLibsDir
+        ) { archList, jniDir ->
             archList.associate { arch ->
                 val classifier = when (arch) {
                     "arm" -> "android-arm"
@@ -97,8 +100,8 @@ fun Project.configureAndroidNative(extension: DownloadPdfiumExtension) {
 
     // Auto-link NDK CMake build to our download task
     tasks.configureEach {
-        if (name.startsWith("configureCMake") || 
-            name.startsWith("buildCMake") || 
+        if (name.startsWith("configureCMake") ||
+            name.startsWith("buildCMake") ||
             (name.startsWith("merge") && name.endsWith("JniLibFolders"))
         ) {
             dependsOn(downloadAndExtractPdfium)
@@ -121,7 +124,9 @@ fun Project.configureKmpJvm(extension: DownloadPdfiumExtension) {
         classifiers.set(extension.architectures)
 
         // Map outputDirs per platform classifier
-        val resolvedOutputDirs = extension.architectures.zip(extension.jniLibsDir) { archList, jniDir ->
+        val resolvedOutputDirs = extension.architectures.zip(
+            extension.jniLibsDir
+        ) { archList, jniDir ->
             archList.associateWith { arch ->
                 jniDir.dir(arch).asFile
             }
@@ -179,7 +184,9 @@ fun Project.configureKmpJvm(extension: DownloadPdfiumExtension) {
 }
 
 fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
-    val kotlin = extensions.findByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>() ?: return
+    val kotlin =
+        extensions.findByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
+            ?: return
 
     afterEvaluate {
         // iOS targets check
@@ -188,7 +195,9 @@ fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
 
         println("kpdfium plugin: Auto-configuring iOS Native PDFium Build Graph...")
         // Configure C-Interop and static linking for iOS targets
-        kotlin.targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().forEach { target ->
+        kotlin.targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().forEach {
+                target
+            ->
             if (target.name.startsWith("ios")) {
                 // A. Configure C-Interop for headers
                 target.compilations.getByName("main") {

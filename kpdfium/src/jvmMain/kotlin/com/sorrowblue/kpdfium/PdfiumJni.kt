@@ -38,6 +38,7 @@ internal object PdfiumJni {
     /**
      * Renders a PDF page directly into a JVM Direct ByteBuffer (Zero-copy!).
      */
+    @Suppress("LongParameterList")
     external fun FPDF_RenderPageBitmapJvm(
         pagePtr: Long,
         byteBuffer: ByteBuffer,

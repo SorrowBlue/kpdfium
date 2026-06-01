@@ -804,8 +804,9 @@ style:
     active: true
     aliases: ['unused']
     allowedNames: ''
+    ignoreAnnotated: ['Preview']
   UnusedPrivateProperty:
-    active: true
+    active: false
     aliases: ['unused']
     allowedNames: 'ignored|expected|serialVersionUID'
   UnusedVariable:

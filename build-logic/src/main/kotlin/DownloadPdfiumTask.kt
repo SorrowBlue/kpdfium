@@ -1,3 +1,7 @@
+import java.io.File
+import java.io.InputStream
+import java.net.URI
+import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ArchiveOperations
@@ -8,12 +12,7 @@ import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import java.io.File
-import java.io.InputStream
-import java.net.URI
-import javax.inject.Inject
 
 abstract class DownloadPdfiumTask : DefaultTask() {
     @get:Inject
@@ -58,14 +57,18 @@ abstract class DownloadPdfiumTask : DefaultTask() {
         val version = pdfiumVersion.get()
 
         if (version == "latest") {
-            throw GradleException("kpdfium: 'latest' version is NOT allowed. Please specify a fixed PDFium version (e.g. 'chromium/6543') in downloadPdfium configuration block.")
+            throw GradleException(
+                "kpdfium: 'latest' version is NOT allowed. Please specify a fixed PDFium version (e.g. 'chromium/6543') in downloadPdfium configuration block."
+            )
         }
 
         classifiersList.forEachIndexed { index, classifier ->
             val destDir = outputDirs.get()[classifier]
-                ?: throw GradleException("Output directory not specified for classifier: $classifier")
+                ?: throw GradleException(
+                    "Output directory not specified for classifier: $classifier"
+                )
             val includes = includeFilters.get()[classifier] ?: emptyList()
-            
+
             // Resolve check file name dynamically based on OS platform classifier
             val checkFileName = when {
                 classifier.contains("android") -> "libpdfium.so"
@@ -78,12 +81,14 @@ abstract class DownloadPdfiumTask : DefaultTask() {
             val versionFile = File(destDir, ".pdfium-version")
 
             // Perform deterministic local caching check based on requested version
-            val isUpToDate = checkFile.exists() && 
-                             versionFile.exists() && 
-                             versionFile.readText().trim() == version
+            val isUpToDate = checkFile.exists() &&
+                versionFile.exists() &&
+                versionFile.readText().trim() == version
 
             if (isUpToDate) {
-                println("PDFium binaries for $classifier ($version) already exist and are up-to-date. Skipping download.")
+                println(
+                    "PDFium binaries for $classifier ($version) already exist and are up-to-date. Skipping download."
+                )
                 return@forEachIndexed
             }
 
@@ -112,7 +117,9 @@ abstract class DownloadPdfiumTask : DefaultTask() {
 
                 // Extract shared headers if enabled, it's the first target (to prevent duplicated extraction), and destination exists
                 if (extractHeaders.get() && headersDest != null && index == 0) {
-                    println("Extracting official PDFium C headers into ${headersDest.absolutePath}...")
+                    println(
+                        "Extracting official PDFium C headers into ${headersDest.absolutePath}..."
+                    )
                     fileSystemOperations.copy {
                         from(archiveOperations.tarTree(archiveOperations.gzip(tarFile))) {
                             include("include/*.h")
@@ -130,7 +137,7 @@ abstract class DownloadPdfiumTask : DefaultTask() {
                 println("Successfully saved version metadata for $classifier: $version")
             } finally {
                 tarFile.delete()
-                
+
                 // Safe cleanup of temporary empty directories created by Gradle copy task
                 File(destDir, "bin").delete()
                 File(destDir, "lib").delete()

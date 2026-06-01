@@ -1,3 +1,5 @@
+import java.io.File
+import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
@@ -5,8 +7,6 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
-import java.io.File
-import javax.inject.Inject
 
 abstract class CompileDesktopJniTask : DefaultTask() {
     @get:Inject
@@ -55,8 +55,13 @@ abstract class CompileDesktopJniTask : DefaultTask() {
         // 3. Resolve library filenames based on OS
         val (jniLibName, pdfiumLibName) = when {
             os.contains("win") -> "pdfium-jni.dll" to "pdfium.dll"
-            os.contains("mac") || os.contains("darwin") -> "libpdfium-jni.dylib" to "libpdfium.dylib"
+
+            os.contains(
+                "mac"
+            ) || os.contains("darwin") -> "libpdfium-jni.dylib" to "libpdfium.dylib"
+
             os.contains("nux") -> "libpdfium-jni.so" to "libpdfium.so"
+
             else -> throw UnsupportedOperationException("Unsupported OS: $os")
         }
 
@@ -69,26 +74,45 @@ abstract class CompileDesktopJniTask : DefaultTask() {
         if (generatedJniFile.exists()) {
             val destJni = File(out, jniLibName)
             generatedJniFile.copyTo(destJni, overwrite = true)
-            
+
             // Resolve correct precompiled platform classifier folder
             val platformClassifier = when {
                 os.contains("win") -> "win-x64"
+
                 os.contains("mac") || os.contains("darwin") -> {
-                    if (arch.contains("aarch64") || arch.contains("arm64")) "mac-arm64" else "mac-x64"
+                    if (arch.contains(
+                            "aarch64"
+                        ) || arch.contains("arm64")
+                    ) {
+                            "mac-arm64"
+                        } else {
+                            "mac-x64"
+                        }
                 }
+
                 os.contains("nux") -> {
-                    if (arch.contains("aarch64") || arch.contains("arm64")) "linux-arm64" else "linux-x64"
+                    if (arch.contains(
+                            "aarch64"
+                        ) || arch.contains("arm64")
+                    ) {
+                            "linux-arm64"
+                        } else {
+                            "linux-x64"
+                        }
                 }
+
                 else -> throw UnsupportedOperationException("Unsupported OS: $os")
             }
-            
+
             val originalPdfium = File(src, "pdfium/$platformClassifier/$pdfiumLibName")
             if (originalPdfium.exists()) {
                 originalPdfium.copyTo(File(out, pdfiumLibName), overwrite = true)
             }
             println("$jniLibName and $pdfiumLibName successfully compiled and copied to resources!")
         } else {
-            throw GradleException("Failed to find generated JNI library at: ${generatedJniFile.absolutePath}")
+            throw GradleException(
+                "Failed to find generated JNI library at: ${generatedJniFile.absolutePath}"
+            )
         }
     }
 }

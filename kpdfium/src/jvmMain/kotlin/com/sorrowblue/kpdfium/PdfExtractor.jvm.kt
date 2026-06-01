@@ -1,25 +1,19 @@
 package com.sorrowblue.kpdfium
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
 public actual object PdfExtractor {
     init {
-        try {
+        runCatching {
             PdfiumJni.FPDF_InitLibrary()
-        } catch (e: Throwable) {
+        }.onFailure { e ->
             System.err.println("Failed to initialize PDFium JVM Library: ${e.message}")
         }
     }
 
-    public actual suspend fun openDocument(source: SeekableSource): PdfDocument =
-        withContext(Dispatchers.IO) {
-            val docPtr = PdfiumJni.FPDF_LoadCustomDocument(source, source.length(), null)
-            if (docPtr == 0L) {
-                throw IllegalArgumentException(
-                    "Failed to parse PDF document via native JNI FPDF_FILEACCESS JVM"
-                )
-            }
-            JvmPdfDocument(docPtr, source)
+    public actual suspend fun openDocument(source: SeekableSource): PdfDocument {
+        val docPtr = PdfiumJni.FPDF_LoadCustomDocument(source, source.length(), null)
+        require(docPtr != 0L) {
+            "Failed to parse PDF document via native JNI FPDF_FILEACCESS JVM"
         }
+        return JvmPdfDocument(docPtr, source)
+    }
 }

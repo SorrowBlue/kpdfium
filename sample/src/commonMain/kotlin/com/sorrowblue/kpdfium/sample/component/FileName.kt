@@ -11,7 +11,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 
 @Composable
-internal fun FileName(fileName: String?, modifier: Modifier) {
+internal fun FileName(fileName: String?, modifier: Modifier = Modifier) {
     Text(
         text = "File: $fileName",
         fontSize = 14.sp,

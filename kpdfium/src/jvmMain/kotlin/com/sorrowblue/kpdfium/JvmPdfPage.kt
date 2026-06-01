@@ -16,10 +16,8 @@ internal class JvmPdfPage(
     override val pageIndex: Int
 ) : PdfPage {
     private val pagePtr: Long = PdfiumJni.FPDF_LoadPage(docPtr, pageIndex).also {
-        if (it == 0L) {
-            throw IllegalArgumentException(
-                "Failed to load PDF page at index $pageIndex. The document might be corrupted or the page index is invalid."
-            )
+        require(it != 0L) {
+            "Failed to load PDF page at index $pageIndex. The document might be corrupted or the page index is invalid."
         }
     }
 
@@ -72,8 +70,8 @@ internal class JvmPdfPage(
     override suspend fun render(dpi: Int, format: ImageFormat, quality: Int, sink: Sink): Unit =
         document.mutex.withLock {
             require(dpi > 0) { "DPI must be greater than 0" }
-            require(quality in 0..100) { "Quality must be between 0 and 100" }
-            val scale = dpi / 72.0f
+            require(quality in 0..QUALITY_MAX) { "Quality must be between 0 and 100" }
+            val scale = dpi / DPI_STANDARD.toFloat()
             val targetWidth = (width * scale).toInt()
             val targetHeight = (height * scale).toInt()
 
@@ -120,13 +118,11 @@ internal class JvmPdfPage(
 
             ImageFormat.JPEG -> {
                 val writers = ImageIO.getImageWritersByFormatName("jpeg")
-                if (!writers.hasNext()) {
-                    throw IllegalStateException("No JPEG writers found")
-                }
+                check(writers.hasNext()) { "No JPEG writers found" }
                 val writer = writers.next()
                 val writeParam = writer.defaultWriteParam
                 writeParam.compressionMode = javax.imageio.ImageWriteParam.MODE_EXPLICIT
-                writeParam.compressionQuality = quality / 100.0f
+                writeParam.compressionQuality = quality / QUALITY_MAX.toFloat()
 
                 ImageIO.createImageOutputStream(outputStream).use { ios ->
                     writer.output = ios
