@@ -14,7 +14,7 @@ kotlin {
     android {
         namespace = "com.sorrowblue.kpdfium.sample"
     }
-    
+
     jvm()
 
     val jniLibsDir = project(":kpdfium").layout.projectDirectory.dir("src/cpp/pdfium")
@@ -29,7 +29,7 @@ kotlin {
             baseName = xcframeworkName
             isStatic = false
             export(projects.kpdfium)
-            
+
             val platformClassifier = when (iosTarget.name) {
                 "iosArm64" -> "ios-device-arm64"
                 "iosSimulatorArm64" -> "ios-simulator-arm64"
@@ -41,35 +41,38 @@ kotlin {
             }
         }
     }
-    
+
     jvmToolchain {
         vendor.set(JvmVendorSpec.ADOPTIUM)
         languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
     }
-    
+
     sourceSets {
-        val commonMain by getting {
+        commonMain {
             dependencies {
                 api(projects.kpdfium)
-                implementation("org.jetbrains.compose.runtime:runtime:1.12.0-alpha01")
-                implementation("org.jetbrains.compose.material3:material3:1.12.0-alpha01")
-                implementation("org.jetbrains.compose.ui:ui-tooling-preview:1.12.0-alpha01")
-                implementation("io.github.vinceglb:filekit-dialogs-compose:0.14.1")
-                implementation("io.coil-kt.coil3:coil-compose:3.4.0")
+
+                implementation(libs.compose.runtime)
+                implementation(libs.compose.material3)
+                implementation(libs.compose.uiToolingPreview)
+
                 implementation(libs.kotlinx.coroutines.core)
-                implementation(libs.kotlinx.ioOkio)
+                implementation(libs.kotlinx.io.okio)
                 implementation(libs.kotlinx.serializationJson)
+
+                implementation(libs.coil3.compose)
+                implementation(libs.filekit.dialogsCompose)
             }
         }
-        
-        val androidMain by getting {
+
+        androidMain {
             dependencies {
                 implementation(libs.androidx.core.ktx)
                 implementation(libs.androidx.activity.compose)
             }
         }
-        
-        val jvmMain by getting {
+
+        jvmMain {
             dependencies {
                 implementation(compose.desktop.currentOs)
             }
@@ -82,7 +85,7 @@ kotlin {
 }
 
 dependencies {
-    androidRuntimeClasspath("org.jetbrains.compose.ui:ui-tooling:1.12.0-alpha01")
+    androidRuntimeClasspath(libs.compose.uiTooling)
 }
 
 compose.desktop {
@@ -113,18 +116,25 @@ tasks.register("embedAndSignPdfium") {
             if (dylibFile.exists()) {
                 val targetDir = file(builtProductsDir)
                 val appDir = targetDir.resolve(contentsFolderPath ?: "")
-                
+
                 inputs.file(dylibFile)
                 outputs.file(targetDir.resolve("libpdfium.dylib"))
                 if (contentsFolderPath != null) {
                     outputs.file(appDir.resolve("libpdfium.dylib"))
                 }
-                
+
                 doLast {
                     // $BUILT_PRODUCTS_DIR へのコピー
                     val targetFile1 = targetDir.resolve("libpdfium.dylib")
                     dylibFile.copyTo(targetFile1, overwrite = true)
-                    ProcessBuilder("codesign", "--force", "--sign", codesignIdentity, "--timestamp=none", targetFile1.absolutePath)
+                    ProcessBuilder(
+                        "codesign",
+                        "--force",
+                        "--sign",
+                        codesignIdentity,
+                        "--timestamp=none",
+                        targetFile1.absolutePath
+                    )
                         .inheritIO()
                         .start()
                         .waitFor()
@@ -133,7 +143,14 @@ tasks.register("embedAndSignPdfium") {
                     if (contentsFolderPath != null) {
                         val targetFile2 = appDir.resolve("libpdfium.dylib")
                         dylibFile.copyTo(targetFile2, overwrite = true)
-                        ProcessBuilder("codesign", "--force", "--sign", codesignIdentity, "--timestamp=none", targetFile2.absolutePath)
+                        ProcessBuilder(
+                            "codesign",
+                            "--force",
+                            "--sign",
+                            codesignIdentity,
+                            "--timestamp=none",
+                            targetFile2.absolutePath
+                        )
                             .inheritIO()
                             .start()
                             .waitFor()
