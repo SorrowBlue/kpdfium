@@ -1,8 +1,8 @@
 package com.sorrowblue.kpdfium.plugin
 
 import java.io.File
-import java.net.URI
 import java.net.CookieManager
+import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -15,6 +15,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.impldep.org.apache.http.HttpStatus
 
 abstract class DownloadGoogleDriveTask : DefaultTask() {
 
@@ -48,7 +49,7 @@ abstract class DownloadGoogleDriveTask : DefaultTask() {
                 return@forEach
             }
 
-            try {
+            runCatching {
                 val initialUrl = "https://docs.google.com/uc?export=download&id=$id"
                 val request1 = HttpRequest.newBuilder().uri(URI.create(initialUrl)).build()
                 val response1 = client.send(request1, HttpResponse.BodyHandlers.ofString())
@@ -69,12 +70,17 @@ abstract class DownloadGoogleDriveTask : DefaultTask() {
                 }
 
                 val request2 = HttpRequest.newBuilder().uri(URI.create(downloadUrl)).build()
-                val response2 = client.send(request2, HttpResponse.BodyHandlers.ofFile(destFile.toPath()))
+                val response2 = client.send(
+                    request2,
+                    HttpResponse.BodyHandlers.ofFile(destFile.toPath())
+                )
 
-                if (response2.statusCode() != 200) {
-                    throw GradleException("Failed to download $filename. HTTP status: ${response2.statusCode()}")
+                if (response2.statusCode() != HttpStatus.SC_OK) {
+                    throw GradleException(
+                        "Failed to download $filename. HTTP status: ${response2.statusCode()}"
+                    )
                 }
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 if (destFile.exists()) {
                     destFile.delete()
                 }
