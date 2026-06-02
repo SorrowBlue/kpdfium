@@ -1,19 +1,20 @@
 package com.sorrowblue.kpdfium
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
-import kotlinx.io.asSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 
 class PdfExtractorJvmTest {
 
     private fun loadTestPdf(): ByteArray {
-        val pdfStream = PdfExtractorJvmTest::class.java.classLoader.getResourceAsStream("sample_test.pdf")
+        val pdfStream = PdfExtractorJvmTest::class.java.classLoader.getResourceAsStream(
+            "sample_test.pdf"
+        )
         assertNotNull(pdfStream, "sample_test.pdf resource was not found")
         return pdfStream.use { it.readBytes() }
     }
@@ -150,7 +151,9 @@ class PdfExtractorJvmTest {
 
     @Test
     fun testOpenLargeDocument() {
-        val pdfStream = PdfExtractorJvmTest::class.java.classLoader.getResourceAsStream("large_test.pdf")
+        val pdfStream = PdfExtractorJvmTest::class.java.classLoader.getResourceAsStream(
+            "large_test.pdf"
+        )
         if (pdfStream == null) {
             println("large_test.pdf is not available, skipping testOpenLargeDocument")
             return
@@ -174,7 +177,10 @@ class PdfExtractorJvmTest {
                         // テストの実行速度向上のため、DPIを低く（10）設定して処理を軽量化します。
                         val imageBytes = page.render(dpi = 10, format = ImageFormat.PNG)
                         assertNotNull(imageBytes)
-                        assertTrue(imageBytes.isNotEmpty(), "Page $i image bytes should not be empty")
+                        assertTrue(
+                            imageBytes.isNotEmpty(),
+                            "Page $i image bytes should not be empty"
+                        )
                     } finally {
                         page.close()
                     }
@@ -249,6 +255,44 @@ class PdfExtractorJvmTest {
                 jobs.awaitAll()
             } finally {
                 document.close()
+            }
+        }
+    }
+
+    @Test
+    fun testClosedDocumentAndPageAccess() {
+        runBlocking {
+            val pdfBytes = loadTestPdf()
+            val document = PdfExtractor.openDocument(pdfBytes)
+            val page = document.getPage(0)
+
+            // まずクローズ前の状態を確認
+            assertTrue(document.pageCount > 0)
+            assertTrue(page.width > 0)
+
+            // ページをクローズ
+            page.close()
+
+            // クローズ済みのページ操作で IllegalStateException が発生することを確認
+            assertFailsWith<IllegalStateException> {
+                page.width
+            }
+            assertFailsWith<IllegalStateException> {
+                page.height
+            }
+            assertFailsWith<IllegalStateException> {
+                page.render(dpi = 10, format = ImageFormat.PNG)
+            }
+
+            // ドキュメントをクローズ
+            document.close()
+
+            // クローズ済みのドキュメント操作で IllegalStateException が発生することを確認
+            assertFailsWith<IllegalStateException> {
+                document.pageCount
+            }
+            assertFailsWith<IllegalStateException> {
+                document.getPage(0)
             }
         }
     }

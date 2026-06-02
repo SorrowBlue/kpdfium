@@ -13,11 +13,20 @@ internal class IosPdfDocument(
     private val fileAccess: CPointer<FPDF_FILEACCESS>
 ) : PdfDocument {
     internal val mutex = Mutex()
+    private var isClosed = false
+
+    private fun checkClosed() {
+        check(!isClosed) { "PdfDocument is already closed" }
+    }
     
     override val pageCount: Int
-        get() = FPDF_GetPageCount(docPtr)
+        get() {
+            checkClosed()
+            return FPDF_GetPageCount(docPtr)
+        }
 
     override suspend fun getPage(pageIndex: Int): PdfPage = mutex.withLock {
+        checkClosed()
         if (pageIndex < 0 || pageIndex >= pageCount) {
             throw IndexOutOfBoundsException("Page index $pageIndex is out of bounds (0 ..< $pageCount)")
         }
@@ -25,6 +34,8 @@ internal class IosPdfDocument(
     }
 
     override fun close() {
+        if (isClosed) return
+        isClosed = true
         FPDF_CloseDocument(docPtr)
         stableRef.dispose()
         nativeHeap.free(fileAccess)

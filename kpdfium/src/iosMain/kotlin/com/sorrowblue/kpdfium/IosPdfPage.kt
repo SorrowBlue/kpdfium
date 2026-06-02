@@ -23,13 +23,26 @@ internal class IosPdfPage(
     private val pagePtr: FPDF_PAGE = FPDF_LoadPage(docPtr, pageIndex)
         ?: throw IllegalArgumentException("Failed to load PDF page $pageIndex on iOS")
 
+    private var isClosed = false
+
+    private fun checkClosed() {
+        check(!isClosed) { "PdfPage is already closed" }
+    }
+
     override val width: Int 
-        get() = FPDF_GetPageWidthF(pagePtr).toInt()
+        get() {
+            checkClosed()
+            return FPDF_GetPageWidthF(pagePtr).toInt()
+        }
 
     override val height: Int 
-        get() = FPDF_GetPageHeightF(pagePtr).toInt()
+        get() {
+            checkClosed()
+            return FPDF_GetPageHeightF(pagePtr).toInt()
+        }
 
     override suspend fun render(dpi: Int, format: ImageFormat, quality: Int): ByteArray = document.mutex.withLock {
+        checkClosed()
         require(dpi > 0) { "DPI must be greater than 0" }
         require(quality in 0..QUALITY_MAX) { "Quality must be between 0 and 100" }
         withContext(Dispatchers.IO) {
@@ -161,11 +174,14 @@ internal class IosPdfPage(
     }
 
     override suspend fun render(dpi: Int, format: ImageFormat, quality: Int, sink: Sink) {
+        checkClosed()
         val bytes = render(dpi, format, quality)
         sink.write(bytes)
     }
 
     override fun close() {
+        if (isClosed) return
+        isClosed = true
         FPDF_ClosePage(pagePtr)
     }
 }

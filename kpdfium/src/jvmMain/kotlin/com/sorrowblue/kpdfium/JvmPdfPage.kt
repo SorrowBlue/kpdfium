@@ -20,12 +20,27 @@ internal class JvmPdfPage(
             "Failed to load PDF page at index $pageIndex. The document might be corrupted or the page index is invalid."
         }
     }
+    private var isClosed = false
 
-    override val width: Int get() = PdfiumJni.FPDF_GetPageWidthF(pagePtr).toInt()
-    override val height: Int get() = PdfiumJni.FPDF_GetPageHeightF(pagePtr).toInt()
+    private fun checkClosed() {
+        check(!isClosed) { "PdfPage is already closed" }
+    }
+
+    override val width: Int
+        get() {
+            checkClosed()
+            return PdfiumJni.FPDF_GetPageWidthF(pagePtr).toInt()
+        }
+
+    override val height: Int
+        get() {
+            checkClosed()
+            return PdfiumJni.FPDF_GetPageHeightF(pagePtr).toInt()
+        }
 
     override suspend fun render(dpi: Int, format: ImageFormat, quality: Int): ByteArray =
         document.mutex.withLock {
+            checkClosed()
             require(dpi > 0) { "DPI must be greater than 0" }
             require(quality in 0..QUALITY_MAX) { "Quality must be between 0 and 100" }
             val scale = dpi / 72.0f
@@ -69,6 +84,7 @@ internal class JvmPdfPage(
 
     override suspend fun render(dpi: Int, format: ImageFormat, quality: Int, sink: Sink): Unit =
         document.mutex.withLock {
+            checkClosed()
             require(dpi > 0) { "DPI must be greater than 0" }
             require(quality in 0..QUALITY_MAX) { "Quality must be between 0 and 100" }
             val scale = dpi / DPI_STANDARD.toFloat()
@@ -156,6 +172,8 @@ internal class JvmPdfPage(
     }
 
     override fun close() {
+        if (isClosed) return
+        isClosed = true
         PdfiumJni.FPDF_ClosePage(pagePtr)
     }
 }

@@ -46,20 +46,19 @@ public class InputStreamSeekableSource private constructor(
          * @param inputStream 入力元となる InputStream。
          * @return [InputStreamSeekableSource] のインスタンス。
          */
-        public fun create(inputStream: InputStream): InputStreamSeekableSource {
-            return if (inputStream is FileInputStream) {
+        public fun create(inputStream: InputStream): InputStreamSeekableSource =
+            if (inputStream is FileInputStream) {
                 InputStreamSeekableSource(inputStream.channel, inputStream.channel.size())
             } else {
                 val tempFile = File.createTempFile("kpdfium_stream_", ".pdf")
                 tempFile.deleteOnExit()
-                
+
                 tempFile.outputStream().use { output ->
                     inputStream.copyTo(output)
                 }
-                
+
                 val raf = RandomAccessFile(tempFile, "r")
                 InputStreamSeekableSource(raf.channel, tempFile.length(), tempFile)
             }
-        }
     }
 }
