@@ -1,3 +1,5 @@
+package com.sorrowblue.kpdfium.plugin
+
 import java.io.File
 import java.io.InputStream
 import java.net.URI

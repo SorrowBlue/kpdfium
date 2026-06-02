@@ -1,3 +1,5 @@
+import com.sorrowblue.kpdfium.plugin.CompileDesktopJniTask
+import com.sorrowblue.kpdfium.plugin.DownloadPdfiumTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property

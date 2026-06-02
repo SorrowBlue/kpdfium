@@ -8,6 +8,7 @@ plugins {
     id("kioarch.detekt")
     id("kpdfium.lint")
     id("kpdfium")
+    id("kpdfium.google-drive")
 }
 
 val os = System.getProperty("os.name").lowercase()
@@ -61,8 +62,14 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.io.core)
         }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
         jvmMain.dependencies {
             // JVM JNI dynamic library loading (no JNA dependency required!)
+        }
+        jvmTest.dependencies {
+            implementation(kotlin("test"))
         }
         androidMain.dependencies {
             implementation(project(":kpdfium:android"))
@@ -112,6 +119,9 @@ mavenPublishing {
     }
 }
 
-
-
-
+downloadLargeTestPdf {
+    outputDir.set(layout.projectDirectory.dir("src/jvmTest/resources"))
+    downloads.set(mapOf(
+        "large_test.pdf" to "132xTU2vPZtlFi5OQaXTtu66WqBk8E3-e"
+    ))
+}

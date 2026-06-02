@@ -34,3 +34,5 @@ xcuserdata/
 !*.xcodeproj/xcshareddata/
 !*.xcodeproj/project.xcworkspace/
 !*.xcworkspace/contents.xcworkspacedata
+/kpdfium/src/jvmTest/resources/large_test.pdf
+

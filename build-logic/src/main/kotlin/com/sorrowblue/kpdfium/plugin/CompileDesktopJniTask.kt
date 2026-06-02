@@ -1,3 +1,5 @@
+package com.sorrowblue.kpdfium.plugin
+
 import java.io.File
 import javax.inject.Inject
 import org.gradle.api.DefaultTask
