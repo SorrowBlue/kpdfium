@@ -1,5 +1,7 @@
 package com.sorrowblue.kpdfium
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSource
 import kotlin.test.Test
@@ -180,6 +182,73 @@ class PdfExtractorJvmTest {
             } finally {
                 document.close()
                 source.close()
+            }
+        }
+    }
+
+    @Test
+    fun testOpenInvalidDocument() {
+        runBlocking {
+            // 空のバイト配列
+            assertFailsWith<IllegalArgumentException> {
+                PdfExtractor.openDocument(ByteArray(0))
+            }
+            // ランダムで無効なバイナリデータ
+            assertFailsWith<IllegalArgumentException> {
+                PdfExtractor.openDocument(byteArrayOf(1, 2, 3, 4, 5))
+            }
+        }
+    }
+
+    @Test
+    fun testInvalidPageIndices() {
+        runBlocking {
+            val pdfBytes = loadTestPdf()
+            val document = PdfExtractor.openDocument(pdfBytes)
+            assertNotNull(document)
+
+            try {
+                val pageCount = document.pageCount
+                // 負のインデックス
+                assertFailsWith<IndexOutOfBoundsException> {
+                    document.getPage(-1)
+                }
+                // ページ数以上のインデックス
+                assertFailsWith<IndexOutOfBoundsException> {
+                    document.getPage(pageCount)
+                }
+                assertFailsWith<IndexOutOfBoundsException> {
+                    document.getPage(pageCount + 10)
+                }
+            } finally {
+                document.close()
+            }
+        }
+    }
+
+    @Test
+    fun testConcurrentPdfRenderingStabilityJvm() {
+        runBlocking {
+            val pdfBytes = loadTestPdf()
+            val document = PdfExtractor.openDocument(pdfBytes)
+            assertNotNull(document)
+
+            try {
+                // 12の並行コルーチンから同時に0ページ目をレンダリングする
+                val jobs = List(12) {
+                    async {
+                        repeat(10) {
+                            document.getPage(0).use { page ->
+                                val bytes = page.render(dpi = 10, format = ImageFormat.PNG)
+                                assertNotNull(bytes)
+                                assertTrue(bytes.isNotEmpty())
+                            }
+                        }
+                    }
+                }
+                jobs.awaitAll()
+            } finally {
+                document.close()
             }
         }
     }
