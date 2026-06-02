@@ -15,9 +15,6 @@ Google の PDFium をバックエンドとした、高パフォーマンスな K
 1. **JVM (Desktop)**: JNA (Java Native Access) による `pdfium` の動的ロードおよび描画。
 2. **Android**: Android NDK JNI 経由での C++ ブリッジによる `libpdfium.so` のゼロコピー（`AndroidBitmap_lockPixels`）描画。
 
-## 参照プロジェクト（読み取り専用）
-- `pdf-extractor-kmp` は**参照（閲覧）専用**です。実装のポート（リネーム・最適化）の参考にしてください。直接の編集は行いません。
-
 ## コミット規約
 - すべてのコミットは `Conventional Commits` 形式に従い、コミットメッセージは `.agent/rules/git-commit-rules.md` に基づいて生成してください。
 
