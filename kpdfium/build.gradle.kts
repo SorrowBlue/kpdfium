@@ -6,6 +6,7 @@ plugins {
 
     id("kioarch.versioning")
     id("kioarch.detekt")
+    id("kpdfium.lint")
     id("kpdfium")
 }
 

@@ -19,6 +19,14 @@ jobs:
             task: ":build-logic:detektMain"
             sarif_file: "build-logic/build/reports/detekt/main.sarif"
             category: "detekt"
+          - name: Android Lint Debug
+            task: "lintDebug"
+            sarif_file: "build/reports/lint/lint-result.sarif"
+            category: "android-lint"
+          - name: android Lint Release
+            task: "lintRelease"
+            sarif_file: "build/reports/lint/lint-result.sarif"
+            category: "android-lint"
     name: 🔍️ ${{ matrix.name }}
     runs-on: ubuntu-latest
     steps:

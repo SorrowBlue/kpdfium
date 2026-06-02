@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.serialization)
     id("kioarch.detekt")
+    id("kpdfium.lint")
 }
 
 kotlin {
@@ -20,7 +21,6 @@ kotlin {
     val jniLibsDir = project(":kpdfium").layout.projectDirectory.dir("src/cpp/pdfium")
 
     val xcframeworkName = "ComposeApp"
-    val xcf = XCFramework(xcframeworkName)
     listOf(
         iosArm64(),
         iosSimulatorArm64()

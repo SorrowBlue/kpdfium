@@ -12,6 +12,7 @@ plugins {
     alias(libs.plugins.detekt) apply false
     alias(libs.plugins.compose.multiplatform) apply false
     alias(libs.plugins.kotlin.serialization) apply false
+    id("com.android.lint") version libs.versions.agp.get() apply false
 }
 
 val reportMerge = tasks.register("reportMerge", ReportMergeTask::class) {

@@ -1,0 +1,64 @@
+import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryExtension
+import com.android.build.api.dsl.LibraryExtension
+import com.android.build.api.dsl.Lint
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+
+private fun PluginManager.hasPlugin(provider: Provider<PluginDependency>): Boolean =
+    hasPlugin(provider.get().pluginId)
+
+when {
+    pluginManager.hasPlugin(libs.plugins.android.application) -> {
+        configure<ApplicationExtension> {
+            lint {
+                configure()
+            }
+        }
+    }
+
+    pluginManager.hasPlugin(libs.plugins.android.library) -> {
+        configure<LibraryExtension> {
+            lint {
+                configure()
+            }
+        }
+    }
+
+    pluginManager.hasPlugin(libs.plugins.android.multiplatformLibrary) -> {
+        configure<KotlinMultiplatformExtension> {
+            configure<KotlinMultiplatformAndroidLibraryExtension> {
+                lint {
+                    configure()
+                }
+            }
+        }
+    }
+}
+
+private fun Lint.configure() {
+    val isCI = System.getenv("CI").toBoolean()
+    checkAllWarnings = true
+    checkDependencies = true
+//    disable += listOf(
+//        "NewerVersionAvailable",
+//        "GradleDependency",
+//        "AppLinksAutoVerify",
+//    )
+    baseline = rootProject.file("config/lint-baseline.xml")
+    htmlReport = !isCI
+    htmlOutput =
+        if (htmlReport) {
+            project.file("${project.rootDir}/build/reports/lint/lint-result.html")
+        } else {
+            null
+        }
+    sarifReport = isCI
+    sarifOutput =
+        if (sarifReport) {
+            project.file("${project.rootDir}/build/reports/lint/lint-result.sarif")
+        } else {
+            null
+        }
+    textReport = false
+    xmlReport = false
+}
