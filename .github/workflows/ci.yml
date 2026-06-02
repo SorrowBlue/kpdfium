@@ -53,7 +53,7 @@ jobs:
             echo "  - Other files changed: $OTHER_FILES_CHANGED"
           fi
 
-  int:
+  lint:
     needs: check-commit
     if: needs.check-commit.outputs.should-run == 'true'
     uses: ./.github/workflows/lint.yml
