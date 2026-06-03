@@ -1,14 +1,11 @@
-package com.sorrowblue.kpdfium.sample.android
+package com.sorrowblue.kpdfium
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.sorrowblue.kpdfium.PdfExtractor
-import com.sorrowblue.kpdfium.openDocument
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -22,12 +19,12 @@ class PdfiumStabilityTest {
             val context = InstrumentationRegistry.getInstrumentation().context
             val assetManager = context.assets
             val pdfBytes = assetManager.open("sample_test.pdf").use { it.readBytes() }
-            assertNotNull("Failed to read sample_test.pdf from assets", pdfBytes)
+            Assert.assertNotNull("Failed to read sample_test.pdf from assets", pdfBytes)
 
             // 2. Open document using PdfExtractor
             val document = PdfExtractor.openDocument(pdfBytes)
-            assertNotNull("Failed to open PDF document", document)
-            assertEquals("Sample PDF should have 1 page", 1, document.pageCount)
+            Assert.assertNotNull("Failed to open PDF document", document)
+            Assert.assertEquals("Sample PDF should have 1 page", 1, document.pageCount)
 
             try {
                 // 3. Stress Test: Launch 12 concurrent coroutines to render the same page simultaneously
@@ -38,7 +35,10 @@ class PdfiumStabilityTest {
                             // Concurrent call to getPage and renderToPng
                             document.getPage(0).use { page ->
                                 val bytes = page.render()
-                                assertNotNull("Rendered page bytes should not be null", bytes)
+                                Assert.assertNotNull(
+                                    "Rendered page bytes should not be null",
+                                    bytes
+                                )
                             }
                         }
                     }

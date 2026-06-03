@@ -48,6 +48,14 @@ kotlin {
 
     android {
         namespace = "com.sorrowblue.kpdfium"
+        androidResources {
+            enable = true
+        }
+        withHostTest {
+        }
+        withDeviceTest {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
     }
 
     jvm()
@@ -74,6 +82,14 @@ kotlin {
         androidMain.dependencies {
             implementation(project(":kpdfium:android"))
             implementation(libs.androidx.core.ktx)
+        }
+
+        val androidDeviceTest by getting {
+            dependencies {
+                implementation(libs.androidx.test.runner)
+                implementation(libs.androidx.test.ext.junit)
+                implementation(libs.compose.runtime)
+            }
         }
     }
 

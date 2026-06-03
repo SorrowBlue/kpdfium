@@ -19,8 +19,6 @@ android {
         applicationId = "com.sorrowblue.kpdfium.sample.android"
         versionCode = 1
         versionName = "1.0.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -40,8 +38,4 @@ android {
 dependencies {
     implementation(projects.kpdfium)
     implementation(projects.sample)
-
-    androidTestImplementation(libs.androidx.test.runner)
-    androidTestImplementation(libs.androidx.test.ext.junit)
-    androidTestImplementation(libs.compose.runtime)
 }
