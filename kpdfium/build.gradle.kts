@@ -53,7 +53,9 @@ kotlin {
         }
         withHostTest {
         }
-        withDeviceTest {
+        withDeviceTestBuilder {
+            sourceSetTreeName = "test"
+        }.configure {
             instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         }
     }
@@ -91,10 +93,13 @@ kotlin {
                 implementation(libs.compose.runtime)
             }
         }
+
+
     }
 
     compilerOptions {
-        freeCompilerArgs.add("-Xexpect-actual-classes")
+        freeCompilerArgs.add("-Xcollection-literals")
+       freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 }
 

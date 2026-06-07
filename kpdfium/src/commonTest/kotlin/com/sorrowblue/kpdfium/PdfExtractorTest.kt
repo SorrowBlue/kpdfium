@@ -9,20 +9,19 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 
-class PdfExtractorJvmTest {
+class PdfExtractorTest {
 
-    private fun loadTestPdf(): ByteArray {
-        val pdfStream = PdfExtractorJvmTest::class.java.classLoader.getResourceAsStream(
-            "sample_test.pdf"
-        )
-        assertNotNull(pdfStream, "sample_test.pdf resource was not found")
-        return pdfStream.use { it.readBytes() }
+    private fun getRequiredTestPdf(fileName: String): ByteArray {
+        val pdfBytes = loadTestPdf(fileName)
+        assertNotNull(pdfBytes, "$fileName was not found or failed to load")
+        return pdfBytes
     }
 
     @Test
     fun testOpenDocumentAndGetPageProperties() {
+        if (!isResourceLoadingSupported) return
         runBlocking {
-            val pdfBytes = loadTestPdf()
+            val pdfBytes = getRequiredTestPdf("sample_test.pdf")
             val document = PdfExtractor.openDocument(pdfBytes)
             assertNotNull(document)
 
@@ -50,8 +49,9 @@ class PdfExtractorJvmTest {
 
     @Test
     fun testRenderPageToPng() {
+        if (!isResourceLoadingSupported) return
         runBlocking {
-            val pdfBytes = loadTestPdf()
+            val pdfBytes = getRequiredTestPdf("sample_test.pdf")
             val document = PdfExtractor.openDocument(pdfBytes)
             val page = document.getPage(0)
 
@@ -69,8 +69,9 @@ class PdfExtractorJvmTest {
 
     @Test
     fun testRenderPageToJpeg() {
+        if (!isResourceLoadingSupported) return
         runBlocking {
-            val pdfBytes = loadTestPdf()
+            val pdfBytes = getRequiredTestPdf("sample_test.pdf")
             val document = PdfExtractor.openDocument(pdfBytes)
             val page = document.getPage(0)
 
@@ -87,16 +88,22 @@ class PdfExtractorJvmTest {
     }
 
     @Test
-    fun testRenderPageToWebpUnsupported() {
+    fun testRenderPageToWebp() {
+        if (!isResourceLoadingSupported) return
         runBlocking {
-            val pdfBytes = loadTestPdf()
+            val pdfBytes = getRequiredTestPdf("sample_test.pdf")
             val document = PdfExtractor.openDocument(pdfBytes)
             val page = document.getPage(0)
 
             try {
-                // JVMでは WEBP 形式は未サポートなので例外を投げるべき
-                assertFailsWith<UnsupportedOperationException> {
-                    page.render(dpi = DPI_STANDARD, format = ImageFormat.WEBP)
+                if (isWebpSupported) {
+                    val webpBytes = page.render(dpi = DPI_STANDARD, format = ImageFormat.WEBP)
+                    assertNotNull(webpBytes)
+                    assertTrue(webpBytes.isNotEmpty(), "Rendered WEBP bytes should not be empty")
+                } else {
+                    assertFailsWith<UnsupportedOperationException> {
+                        page.render(dpi = DPI_STANDARD, format = ImageFormat.WEBP)
+                    }
                 }
             } finally {
                 page.close()
@@ -107,8 +114,9 @@ class PdfExtractorJvmTest {
 
     @Test
     fun testRenderInvalidDpi() {
+        if (!isResourceLoadingSupported) return
         runBlocking {
-            val pdfBytes = loadTestPdf()
+            val pdfBytes = getRequiredTestPdf("sample_test.pdf")
             val document = PdfExtractor.openDocument(pdfBytes)
             val page = document.getPage(0)
 
@@ -129,8 +137,9 @@ class PdfExtractorJvmTest {
 
     @Test
     fun testRenderInvalidQuality() {
+        if (!isResourceLoadingSupported) return
         runBlocking {
-            val pdfBytes = loadTestPdf()
+            val pdfBytes = getRequiredTestPdf("sample_test.pdf")
             val document = PdfExtractor.openDocument(pdfBytes)
             val page = document.getPage(0)
 
@@ -151,17 +160,14 @@ class PdfExtractorJvmTest {
 
     @Test
     fun testOpenLargeDocument() {
-        val pdfStream = PdfExtractorJvmTest::class.java.classLoader.getResourceAsStream(
-            "large_test.pdf"
-        )
-        if (pdfStream == null) {
+        if (!isResourceLoadingSupported) return
+        val source = loadTestPdfSource("large_test.pdf")
+        if (source == null) {
             println("large_test.pdf is not available, skipping testOpenLargeDocument")
             return
         }
 
         runBlocking {
-            // InputStreamSeekableSource を用いてメモリ効率良くドキュメントを開く
-            val source = InputStreamSeekableSource.create(pdfStream)
             val document = PdfExtractor.openDocument(source)
             assertNotNull(document)
 
@@ -192,8 +198,10 @@ class PdfExtractorJvmTest {
         }
     }
 
+
     @Test
     fun testOpenInvalidDocument() {
+        if (!isResourceLoadingSupported) return
         runBlocking {
             // 空のバイト配列
             assertFailsWith<IllegalArgumentException> {
@@ -208,8 +216,9 @@ class PdfExtractorJvmTest {
 
     @Test
     fun testInvalidPageIndices() {
+        if (!isResourceLoadingSupported) return
         runBlocking {
-            val pdfBytes = loadTestPdf()
+            val pdfBytes = getRequiredTestPdf("sample_test.pdf")
             val document = PdfExtractor.openDocument(pdfBytes)
             assertNotNull(document)
 
@@ -233,9 +242,10 @@ class PdfExtractorJvmTest {
     }
 
     @Test
-    fun testConcurrentPdfRenderingStabilityJvm() {
+    fun testConcurrentPdfRenderingStability() {
+        if (!isResourceLoadingSupported) return
         runBlocking {
-            val pdfBytes = loadTestPdf()
+            val pdfBytes = getRequiredTestPdf("sample_test.pdf")
             val document = PdfExtractor.openDocument(pdfBytes)
             assertNotNull(document)
 
@@ -261,8 +271,9 @@ class PdfExtractorJvmTest {
 
     @Test
     fun testClosedDocumentAndPageAccess() {
+        if (!isResourceLoadingSupported) return
         runBlocking {
-            val pdfBytes = loadTestPdf()
+            val pdfBytes = getRequiredTestPdf("sample_test.pdf")
             val document = PdfExtractor.openDocument(pdfBytes)
             val page = document.getPage(0)
 
