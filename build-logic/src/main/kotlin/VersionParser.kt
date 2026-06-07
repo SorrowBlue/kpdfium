@@ -22,12 +22,11 @@ object VersionParser {
             val patch = matchResult.groupValues[3].toInt()
             val prerelease = matchResult.groupValues[4]
             val commitCount = matchResult.groupValues[5]
-            val dirty = matchResult.groupValues[7]
 
             if (commitCount.isNotEmpty()) {
                 "$major.$minor.${patch + 1}-SNAPSHOT"
             } else {
-                "$major.$minor.$patch$prerelease$dirty"
+                "$major.$minor.$patch$prerelease"
             }
         } else {
             defaultVersion

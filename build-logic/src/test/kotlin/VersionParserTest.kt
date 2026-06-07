@@ -13,9 +13,9 @@ class VersionParserTest {
 
     @Test
     fun testTaggedReleasesWithDirty() {
-        assertEquals("1.2.3-dirty", VersionParser.parse("v1.2.3-dirty"))
-        assertEquals("11.22.33-alpha.4-dirty", VersionParser.parse("v11.22.33-alpha.4-dirty"))
-        assertEquals("111.222.333-rc.6-dirty", VersionParser.parse("v111.222.333-rc.6-dirty"))
+        assertEquals("1.2.3", VersionParser.parse("v1.2.3-dirty"))
+        assertEquals("11.22.33-alpha.4", VersionParser.parse("v11.22.33-alpha.4-dirty"))
+        assertEquals("111.222.333-rc.6", VersionParser.parse("v111.222.333-rc.6-dirty"))
     }
 
     @Test
