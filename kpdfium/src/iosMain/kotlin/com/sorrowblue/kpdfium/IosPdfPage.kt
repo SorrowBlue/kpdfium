@@ -1,3 +1,6 @@
+@file:OptIn(ExperimentalForeignApi::class)
+package com.sorrowblue.kpdfium
+
 import com.sorrowblue.kpdfium.native.FPDFBitmap_CreateEx
 import com.sorrowblue.kpdfium.native.FPDFBitmap_Destroy
 import com.sorrowblue.kpdfium.native.FPDFBitmap_FillRect
@@ -10,6 +13,7 @@ import com.sorrowblue.kpdfium.native.FPDF_GetPageWidthF
 import com.sorrowblue.kpdfium.native.FPDF_LoadPage
 import com.sorrowblue.kpdfium.native.FPDF_PAGE
 import com.sorrowblue.kpdfium.native.FPDF_RenderPageBitmap
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.FloatVar
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
@@ -22,7 +26,6 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.io.Sink
-import kotlinx.io.write
 import platform.CoreFoundation.CFDataCreate
 import platform.CoreFoundation.CFDataCreateMutable
 import platform.CoreFoundation.CFDataGetBytePtr
