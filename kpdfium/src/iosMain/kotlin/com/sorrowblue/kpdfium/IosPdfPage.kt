@@ -144,7 +144,7 @@ internal class IosPdfPage(
             qualityVar.value = quality / QUALITY_PERCENT
             val qualityNum = CFNumberCreate(
                 null,
-                kCFNumberFloatType.toULong(),
+                kCFNumberFloatType.toLong(),
                 qualityVar.ptr
             )
             if (qualityNum != null) {
