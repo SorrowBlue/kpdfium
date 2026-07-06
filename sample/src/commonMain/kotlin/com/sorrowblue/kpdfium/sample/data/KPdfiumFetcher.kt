@@ -13,6 +13,8 @@ import coil3.request.Options
 import coil3.request.crossfade
 import com.sorrowblue.kpdfium.DPI_STANDARD
 import com.sorrowblue.kpdfium.ImageFormat
+import com.sorrowblue.kpdfium.PdfExtractor
+import com.sorrowblue.kpdfium.sample.RealSeekableSource
 import io.github.vinceglb.filekit.path
 import kotlinx.io.Buffer
 import kotlinx.io.IOException
@@ -52,34 +54,35 @@ internal class KPdfiumFetcher(
                 return result
             }
 
-            val document = getPdfDocument(options.context, data.file)
+            PdfExtractor.openDocument(RealSeekableSource(options.context, data.file)).use { document ->
+                val newSnapshot =
+                    writeToDiskCache(snapshot = snapshot) { sink ->
+                        document.getPage(data.pageIndex).use {
+                            it.render(dpi = DPI_STANDARD, format = ImageFormat.JPEG, sink = sink)
+                        }
+                    }
+                snapshot = newSnapshot
 
-            snapshot =
-                writeToDiskCache(snapshot = snapshot) { sink ->
+                if (newSnapshot != null) {
+                    return SourceFetchResult(
+                        source = newSnapshot.toImageSource(),
+                        mimeType = "image/*",
+                        dataSource = DataSource.NETWORK
+                    )
+                }
+
+                // 新しいスナップショットの読み取りに失敗した場合は、応答本文が空でない場合はそれを読み取ります。
+                val source = Buffer().also { sink ->
                     document.getPage(data.pageIndex).use {
                         it.render(dpi = DPI_STANDARD, format = ImageFormat.JPEG, sink = sink)
                     }
                 }
-
-            if (snapshot != null) {
                 return SourceFetchResult(
-                    source = snapshot.toImageSource(),
-                    mimeType = "image/*",
+                    source = source.toImageSource(),
+                    mimeType = null,
                     dataSource = DataSource.NETWORK
                 )
             }
-
-            // 新しいスナップショットの読み取りに失敗した場合は、応答本文が空でない場合はそれを読み取ります。
-            val source = Buffer().also { sink ->
-                document.getPage(data.pageIndex).use {
-                    it.render(dpi = DPI_STANDARD, format = ImageFormat.JPEG, sink = sink)
-                }
-            }
-            return SourceFetchResult(
-                source = source.toImageSource(),
-                mimeType = null,
-                dataSource = DataSource.NETWORK
-            )
         }.onFailure {
             println("KPdfiumFetcher fetch error: " + it.message.orEmpty())
             snapshot?.closeQuietly()

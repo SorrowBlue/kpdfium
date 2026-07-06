@@ -16,10 +16,14 @@ import com.sorrowblue.kpdfium.sample.data.PageData
 import com.sorrowblue.kpdfium.sample.data.releasePdfDocument
 import com.sorrowblue.kpdfium.sample.data.setupCoil
 import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
+import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.path
+import com.sorrowblue.kpdfium.sample.data.listPdfFiles
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.PickerResultLauncher
-import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -28,7 +32,9 @@ internal interface AppState {
     val uiState: AppUiState
     val pagerState: PagerState
     val pages: List<PageData>
-    fun onOpenDocumentClick()
+    fun onOpenFolderClick()
+    fun onFileClick(file: PlatformFile)
+    fun onBackClick()
     fun onSliderValueChange(value: Int)
 }
 
@@ -39,9 +45,8 @@ internal fun rememberAppState(): AppState {
     val state = remember { AppStateImpl(context, coroutineScope) }
     val pagerState = rememberPagerState(pageCount = { state.uiState.pageCount })
     state.pagerState = pagerState
-    state.launcher = rememberFilePickerLauncher(
-        type = FileKitType.File("pdf"),
-        onResult = state::onResult
+    state.launcher = rememberDirectoryPickerLauncher(
+        onResult = state::onFolderResult
     )
     DisposableEffect(Unit) {
         setupCoil()
@@ -62,7 +67,7 @@ private class AppStateImpl(
     override var uiState by mutableStateOf(AppUiState())
     override val pages = mutableListOf<PageData>()
 
-    override fun onOpenDocumentClick() {
+    override fun onOpenFolderClick() {
         launcher.launch()
     }
 
@@ -72,16 +77,42 @@ private class AppStateImpl(
         }
     }
 
-    fun onResult(file: PlatformFile?) {
+    fun onFolderResult(directory: PlatformFile?) {
         uiState = AppUiState(isLoading = true)
 
         coroutineScope.launch {
-            if (file == null) {
-                uiState = AppUiState(isLoading = false, errorMessage = "Please select pdf file")
+            if (directory == null) {
+                uiState = AppUiState(isLoading = false, errorMessage = "Please select a folder")
                 return@launch
             }
             runCatching {
-                uiState = uiState.copy(fileName = file.name)
+                val files = directory.listPdfFiles(context)
+                val folderName = directory.path.substringAfterLast('/').substringAfterLast('\\')
+                uiState = uiState.copy(
+                    folderName = folderName,
+                    pdfFiles = files,
+                    selectedFile = null,
+                    pageCount = 0
+                )
+            }.onFailure {
+                if (it is CancellationException) {
+                    throw it
+                } else {
+                    it.printStackTrace()
+                    uiState = uiState.copy(
+                        errorMessage = it.message ?: "Failed to read folder contents."
+                    )
+                }
+            }
+            uiState = uiState.copy(isLoading = false)
+        }
+    }
+
+    override fun onFileClick(file: PlatformFile) {
+        uiState = uiState.copy(isLoading = true, selectedFile = file)
+
+        coroutineScope.launch {
+            runCatching {
                 PdfExtractor.openDocument(RealSeekableSource(context, file)).use { document ->
                     pages.clear()
                     pages.addAll(List(document.pageCount) { PageData(file, it) })
@@ -99,5 +130,10 @@ private class AppStateImpl(
             }
             uiState = uiState.copy(isLoading = false)
         }
+    }
+
+    override fun onBackClick() {
+        pages.clear()
+        uiState = uiState.copy(selectedFile = null, pageCount = 0)
     }
 }

@@ -22,6 +22,7 @@ import com.sorrowblue.kpdfium.sample.ErrorCard
 import com.sorrowblue.kpdfium.sample.PdfPageItem
 import com.sorrowblue.kpdfium.sample.component.FileName
 import com.sorrowblue.kpdfium.sample.data.PageData
+import io.github.vinceglb.filekit.name
 
 @Composable
 internal fun ContentSheet(
@@ -37,7 +38,7 @@ internal fun ContentSheet(
         ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        FileName(fileName = uiState.fileName, modifier = Modifier.padding(top = 12.dp))
+        FileName(fileName = uiState.selectedFile?.name, modifier = Modifier.padding(top = 12.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 1.dp)
         // Content Area
         Box(

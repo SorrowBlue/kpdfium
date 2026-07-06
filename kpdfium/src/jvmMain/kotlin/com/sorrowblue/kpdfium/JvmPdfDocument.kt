@@ -15,7 +15,7 @@ internal class JvmPdfDocument(private val docPtr: Long, private val source: Seek
     override val pageCount: Int
         get() {
             checkClosed()
-            return PdfiumJni.FPDF_GetPageCount(docPtr)
+            return runWithPdfiumLock { PdfiumJni.FPDF_GetPageCount(docPtr) }
         }
 
     override suspend fun getPage(pageIndex: Int): PdfPage = mutex.withLock {
@@ -31,7 +31,9 @@ internal class JvmPdfDocument(private val docPtr: Long, private val source: Seek
     override fun close() {
         if (isClosed) return
         isClosed = true
-        PdfiumJni.FPDF_CloseDocument(docPtr)
+        runWithPdfiumLock {
+            PdfiumJni.FPDF_CloseDocument(docPtr)
+        }
         source.close() // Close the underlying seekable source
     }
 }

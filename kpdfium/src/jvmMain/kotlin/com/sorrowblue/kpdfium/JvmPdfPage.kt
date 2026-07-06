@@ -15,7 +15,9 @@ internal class JvmPdfPage(
     private val docPtr: Long,
     override val pageIndex: Int
 ) : PdfPage {
-    private val pagePtr: Long = PdfiumJni.FPDF_LoadPage(docPtr, pageIndex).also {
+    private val pagePtr: Long = runWithPdfiumLock {
+        PdfiumJni.FPDF_LoadPage(docPtr, pageIndex)
+    }.also {
         require(it != 0L) {
             "Failed to load PDF page at index $pageIndex. The document might be corrupted or the page index is invalid."
         }
@@ -29,13 +31,13 @@ internal class JvmPdfPage(
     override val width: Int
         get() {
             checkClosed()
-            return PdfiumJni.FPDF_GetPageWidthF(pagePtr).toInt()
+            return runWithPdfiumLock { PdfiumJni.FPDF_GetPageWidthF(pagePtr).toInt() }
         }
 
     override val height: Int
         get() {
             checkClosed()
-            return PdfiumJni.FPDF_GetPageHeightF(pagePtr).toInt()
+            return runWithPdfiumLock { PdfiumJni.FPDF_GetPageHeightF(pagePtr).toInt() }
         }
 
     override suspend fun render(dpi: Int, format: ImageFormat, quality: Int): ByteArray =
@@ -55,14 +57,16 @@ internal class JvmPdfPage(
             }
 
             // 2. Render Page into the Direct ByteBuffer via native C++
-            PdfiumJni.FPDF_RenderPageBitmapJvm(
-                pagePtr = pagePtr,
-                byteBuffer = byteBuffer,
-                targetWidth = targetWidth,
-                targetHeight = targetHeight,
-                rotate = 0,
-                flags = 0
-            )
+            runWithPdfiumLock {
+                PdfiumJni.FPDF_RenderPageBitmapJvm(
+                    pagePtr = pagePtr,
+                    byteBuffer = byteBuffer,
+                    targetWidth = targetWidth,
+                    targetHeight = targetHeight,
+                    rotate = 0,
+                    flags = 0
+                )
+            }
 
             // 3. Construct BufferedImage directly from the ByteBuffer pixels (Zero-copy pixel transfer)
             val bufferedImage = BufferedImage(
@@ -99,14 +103,16 @@ internal class JvmPdfPage(
             }
 
             // 2. Render Page into the Direct ByteBuffer via native C++
-            PdfiumJni.FPDF_RenderPageBitmapJvm(
-                pagePtr = pagePtr,
-                byteBuffer = byteBuffer,
-                targetWidth = targetWidth,
-                targetHeight = targetHeight,
-                rotate = 0,
-                flags = 0
-            )
+            runWithPdfiumLock {
+                PdfiumJni.FPDF_RenderPageBitmapJvm(
+                    pagePtr = pagePtr,
+                    byteBuffer = byteBuffer,
+                    targetWidth = targetWidth,
+                    targetHeight = targetHeight,
+                    rotate = 0,
+                    flags = 0
+                )
+            }
 
             // 3. Construct BufferedImage directly from the ByteBuffer pixels (Zero-copy pixel transfer)
             val bufferedImage =
@@ -174,6 +180,8 @@ internal class JvmPdfPage(
     override fun close() {
         if (isClosed) return
         isClosed = true
-        PdfiumJni.FPDF_ClosePage(pagePtr)
+        runWithPdfiumLock {
+            PdfiumJni.FPDF_ClosePage(pagePtr)
+        }
     }
 }

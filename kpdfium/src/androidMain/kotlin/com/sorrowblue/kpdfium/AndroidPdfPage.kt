@@ -13,7 +13,9 @@ internal class AndroidPdfPage(
     private val docPtr: Long,
     override val pageIndex: Int
 ) : PdfPage {
-    private val pagePtr: Long = PdfiumJni.FPDF_LoadPage(docPtr, pageIndex).also {
+    private val pagePtr: Long = runWithPdfiumLock {
+        PdfiumJni.FPDF_LoadPage(docPtr, pageIndex)
+    }.also {
         require(it != 0L) {
             """Failed to load PDF page at index $pageIndex. The document might be corrupted or the page index is invalid."""
         }
@@ -27,13 +29,13 @@ internal class AndroidPdfPage(
     override val width: Int
         get() {
             checkClosed()
-            return PdfiumJni.FPDF_GetPageWidthF(pagePtr).toInt()
+            return runWithPdfiumLock { PdfiumJni.FPDF_GetPageWidthF(pagePtr).toInt() }
         }
 
     override val height: Int
         get() {
             checkClosed()
-            return PdfiumJni.FPDF_GetPageHeightF(pagePtr).toInt()
+            return runWithPdfiumLock { PdfiumJni.FPDF_GetPageHeightF(pagePtr).toInt() }
         }
 
     override suspend fun render(dpi: Int, format: ImageFormat, quality: Int): ByteArray =
@@ -51,16 +53,18 @@ internal class AndroidPdfPage(
             bitmap.eraseColor(Color.WHITE)
 
             // Render directly into the Bitmap's raw memory via NDK C++ (Zero-copy!)
-            PdfiumJni.FPDF_RenderPageBitmap(
-                pagePtr = pagePtr,
-                bitmap = bitmap,
-                startX = 0,
-                startY = 0,
-                sizeX = targetWidth,
-                sizeY = targetHeight,
-                rotate = 0,
-                flags = 0
-            )
+            runWithPdfiumLock {
+                PdfiumJni.FPDF_RenderPageBitmap(
+                    pagePtr = pagePtr,
+                    bitmap = bitmap,
+                    startX = 0,
+                    startY = 0,
+                    sizeX = targetWidth,
+                    sizeY = targetHeight,
+                    rotate = 0,
+                    flags = 0
+                )
+            }
 
             val compressFormat = when (format) {
                 ImageFormat.PNG -> Bitmap.CompressFormat.PNG
@@ -91,16 +95,18 @@ internal class AndroidPdfPage(
             bitmap.eraseColor(Color.WHITE)
 
             // Render directly into the Bitmap's raw memory via NDK C++ (Zero-copy!)
-            PdfiumJni.FPDF_RenderPageBitmap(
-                pagePtr = pagePtr,
-                bitmap = bitmap,
-                startX = 0,
-                startY = 0,
-                sizeX = targetWidth,
-                sizeY = targetHeight,
-                rotate = 0,
-                flags = 0
-            )
+            runWithPdfiumLock {
+                PdfiumJni.FPDF_RenderPageBitmap(
+                    pagePtr = pagePtr,
+                    bitmap = bitmap,
+                    startX = 0,
+                    startY = 0,
+                    sizeX = targetWidth,
+                    sizeY = targetHeight,
+                    rotate = 0,
+                    flags = 0
+                )
+            }
 
             val compressFormat = when (format) {
                 ImageFormat.PNG -> Bitmap.CompressFormat.PNG
@@ -116,6 +122,8 @@ internal class AndroidPdfPage(
     override fun close() {
         if (isClosed) return
         isClosed = true
-        PdfiumJni.FPDF_ClosePage(pagePtr)
+        runWithPdfiumLock {
+            PdfiumJni.FPDF_ClosePage(pagePtr)
+        }
     }
 }

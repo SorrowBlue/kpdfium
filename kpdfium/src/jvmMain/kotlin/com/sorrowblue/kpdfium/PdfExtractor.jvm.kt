@@ -10,7 +10,9 @@ public actual object PdfExtractor {
     }
 
     public actual suspend fun openDocument(source: SeekableSource): PdfDocument {
-        val docPtr = PdfiumJni.FPDF_LoadCustomDocument(source, source.length(), null)
+        val docPtr = runWithPdfiumLock {
+            PdfiumJni.FPDF_LoadCustomDocument(source, source.length(), null)
+        }
         require(docPtr != 0L) {
             "Failed to parse PDF document via native JNI FPDF_FILEACCESS JVM"
         }
