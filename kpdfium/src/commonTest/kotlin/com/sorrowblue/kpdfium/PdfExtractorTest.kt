@@ -198,7 +198,6 @@ class PdfExtractorTest {
         }
     }
 
-
     @Test
     fun testOpenInvalidDocument() {
         if (!isResourceLoadingSupported) return

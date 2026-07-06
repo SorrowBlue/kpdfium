@@ -48,6 +48,8 @@ import com.sorrowblue.kpdfium.sample.section.ContentSheet
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.name
 
+private const val PDF_ASPECT_RATIO = 0.7f
+
 @Composable
 internal fun App() {
     val state = rememberAppState()
@@ -62,7 +64,7 @@ internal fun App() {
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Suppress("LongParameterList")
 @Composable
 internal fun AppScreen(
     uiState: AppUiState,
@@ -75,99 +77,146 @@ internal fun AppScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    if (uiState.selectedFile != null) {
-                        Button(
-                            onClick = onBackClick,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.padding(start = 8.dp)
-                        ) {
-                            Text("←", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                },
-                title = {
-                    Text(
-                        text = uiState.selectedFile?.name 
-                            ?: uiState.folderName 
-                            ?: "No folder selected",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                },
-                actions = {
-                    if (uiState.selectedFile == null) {
-                        Button(
-                            onClick = onOpenFolderClick,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = if (uiState.folderName == null) "OPEN PDF FOLDER" else "CHANGE FOLDER",
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
+            AppTopBar(
+                uiState = uiState,
+                onBackClick = onBackClick,
+                onOpenFolderClick = onOpenFolderClick
             )
         },
         bottomBar = {
-            BottomNavigation(
-                currentPage = pagerState.currentPage,
-                pageCount = uiState.pageCount,
-                onValueChange = onSliderValueChange,
-                modifier = Modifier.padding(
-                    WindowInsets.safeDrawing
-                        .only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
-                        .asPaddingValues()
-                ).padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                    .visible(uiState.pageCount > 0 && uiState.selectedFile != null)
+            AppBottomBar(
+                pagerState = pagerState,
+                uiState = uiState,
+                onSliderValueChange = onSliderValueChange
             )
         }
     ) { contentPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        AppContent(
+            uiState = uiState,
+            pages = pages,
+            pagerState = pagerState,
+            contentPadding = contentPadding,
+            onOpenFolderClick = onOpenFolderClick,
+            onFileClick = onFileClick
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AppTopBar(uiState: AppUiState, onBackClick: () -> Unit, onOpenFolderClick: () -> Unit) {
+    TopAppBar(
+        navigationIcon = {
             if (uiState.selectedFile != null) {
-                ContentSheet(
-                    uiState = uiState,
-                    pagerState = pagerState,
-                    pages = pages,
-                    contentPadding = contentPadding
-                )
-            } else if (uiState.folderName != null) {
-                FolderContentGrid(
-                    pdfFiles = uiState.pdfFiles,
-                    onFileClick = onFileClick,
-                    contentPadding = contentPadding
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(contentPadding),
-                    contentAlignment = Alignment.Center
+                Button(
+                    onClick = onBackClick,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(start = 8.dp)
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "Please select a folder to load PDF files",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = onOpenFolderClick,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("OPEN PDF FOLDER", fontWeight = FontWeight.Bold)
-                        }
+                    Text("←", fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        title = {
+            Text(
+                text = uiState.selectedFile?.name
+                    ?: uiState.folderName
+                    ?: "No folder selected",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+        },
+        actions = {
+            if (uiState.selectedFile == null) {
+                Button(
+                    onClick = onOpenFolderClick,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = if (uiState.folderName == null) {
+                            "OPEN PDF FOLDER"
+                        } else {
+                            "CHANGE FOLDER"
+                        },
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun AppBottomBar(
+    pagerState: PagerState,
+    uiState: AppUiState,
+    onSliderValueChange: (Int) -> Unit
+) {
+    BottomNavigation(
+        currentPage = pagerState.currentPage,
+        pageCount = uiState.pageCount,
+        onValueChange = onSliderValueChange,
+        modifier = Modifier.padding(
+            WindowInsets.safeDrawing
+                .only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
+                .asPaddingValues()
+        ).padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+            .visible(uiState.pageCount > 0 && uiState.selectedFile != null)
+    )
+}
+
+@Suppress("LongParameterList")
+@Composable
+private fun AppContent(
+    uiState: AppUiState,
+    pages: List<PageData>,
+    pagerState: PagerState,
+    contentPadding: PaddingValues,
+    onOpenFolderClick: () -> Unit,
+    onFileClick: (PlatformFile) -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (uiState.selectedFile != null) {
+            ContentSheet(
+                uiState = uiState,
+                pagerState = pagerState,
+                pages = pages,
+                contentPadding = contentPadding
+            )
+        } else if (uiState.folderName != null) {
+            FolderContentGrid(
+                pdfFiles = uiState.pdfFiles,
+                onFileClick = onFileClick,
+                contentPadding = contentPadding
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Please select a folder to load PDF files",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = onOpenFolderClick,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("OPEN PDF FOLDER", fontWeight = FontWeight.Bold)
                     }
                 }
             }
-            ErrorCard(errorMessage = uiState.errorMessage)
         }
+        ErrorCard(errorMessage = uiState.errorMessage)
     }
 }
 
@@ -210,10 +259,7 @@ internal fun FolderContentGrid(
 }
 
 @Composable
-internal fun PdfGridItem(
-    file: PlatformFile,
-    onClick: () -> Unit
-) {
+internal fun PdfGridItem(file: PlatformFile, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -229,7 +275,7 @@ internal fun PdfGridItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(0.7f),
+                    .aspectRatio(PDF_ASPECT_RATIO),
                 contentAlignment = Alignment.Center
             ) {
                 coil3.compose.AsyncImage(

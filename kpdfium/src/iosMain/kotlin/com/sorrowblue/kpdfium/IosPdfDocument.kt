@@ -1,8 +1,15 @@
 @file:OptIn(ExperimentalForeignApi::class)
+
 package com.sorrowblue.kpdfium
 
-import kotlinx.cinterop.*
-import com.sorrowblue.kpdfium.native.*
+import com.sorrowblue.kpdfium.native.FPDF_CloseDocument
+import com.sorrowblue.kpdfium.native.FPDF_DOCUMENT
+import com.sorrowblue.kpdfium.native.FPDF_FILEACCESS
+import com.sorrowblue.kpdfium.native.FPDF_GetPageCount
+import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.StableRef
+import kotlinx.cinterop.nativeHeap
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -18,7 +25,7 @@ internal class IosPdfDocument(
     private fun checkClosed() {
         check(!isClosed) { "PdfDocument is already closed" }
     }
-    
+
     override val pageCount: Int
         get() {
             checkClosed()
@@ -28,7 +35,9 @@ internal class IosPdfDocument(
     override suspend fun getPage(pageIndex: Int): PdfPage = mutex.withLock {
         checkClosed()
         if (pageIndex < 0 || pageIndex >= pageCount) {
-            throw IndexOutOfBoundsException("Page index $pageIndex is out of bounds (0 ..< $pageCount)")
+            throw IndexOutOfBoundsException(
+                "Page index $pageIndex is out of bounds (0 ..< $pageCount)"
+            )
         }
         IosPdfPage(this, docPtr, pageIndex)
     }

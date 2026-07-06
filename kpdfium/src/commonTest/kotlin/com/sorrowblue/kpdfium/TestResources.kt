@@ -22,5 +22,3 @@ public expect fun loadTestPdf(fileName: String): ByteArray?
  * ファイルが存在しない、もしくはロードに失敗した場合は null を返します。
  */
 public expect fun loadTestPdfSource(fileName: String): SeekableSource?
-
-

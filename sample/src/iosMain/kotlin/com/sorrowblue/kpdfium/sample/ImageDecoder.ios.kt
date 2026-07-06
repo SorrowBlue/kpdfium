@@ -11,6 +11,4 @@ actual fun ByteArray.toImageBitmap(): ImageBitmap {
     return skiaImage.toComposeImageBitmap()
 }
 
-actual fun Source.asImageBitmap(): ImageBitmap {
-    return readByteArray().toImageBitmap()
-}
+actual fun Source.asImageBitmap(): ImageBitmap = readByteArray().toImageBitmap()

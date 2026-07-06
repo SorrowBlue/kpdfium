@@ -45,7 +45,7 @@ internal actual class RealSeekableSource actual constructor(
             if (isSecurityScoped) {
                 file.stopAccessingSecurityScopedResource()
             }
-            throw IllegalArgumentException("Failed to open file: $path (errno = ${errno})")
+            throw IllegalArgumentException("Failed to open file: $path (errno = $errno)")
         }
 
         val fp = filePtr
@@ -75,9 +75,7 @@ internal actual class RealSeekableSource actual constructor(
         return ftell(fp)
     }
 
-    actual override fun length(): Long {
-        return fileLength
-    }
+    actual override fun length(): Long = fileLength
 
     actual override fun close() {
         try {

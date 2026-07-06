@@ -1,11 +1,23 @@
 @file:OptIn(ExperimentalForeignApi::class)
+
 package com.sorrowblue.kpdfium
 
+import com.sorrowblue.kpdfium.native.FPDF_FILEACCESS
+import com.sorrowblue.kpdfium.native.FPDF_InitLibrary
+import com.sorrowblue.kpdfium.native.FPDF_LoadCustomDocument
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.StableRef
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.asCPointer
+import kotlinx.cinterop.asStableRef
+import kotlinx.cinterop.nativeHeap
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.staticCFunction
+import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
-import kotlinx.cinterop.*
-import com.sorrowblue.kpdfium.native.*
 import platform.posix.memcpy
 
 public actual object PdfExtractor {
@@ -13,11 +25,12 @@ public actual object PdfExtractor {
         FPDF_InitLibrary()
     }
 
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     public actual suspend fun openDocument(source: SeekableSource): PdfDocument =
         withContext(Dispatchers.IO) {
             val fileAccess = nativeHeap.alloc<FPDF_FILEACCESS>()
             val stableRef = StableRef.create(source)
-            
+
             fileAccess.m_FileLen = source.length().toULong()
             fileAccess.m_Param = stableRef.asCPointer()
             fileAccess.m_GetBlock = staticCFunction { param, position, pBuf, size ->
@@ -26,7 +39,7 @@ public actual object PdfExtractor {
                     val ref = param.asStableRef<SeekableSource>()
                     val src = ref.get()
                     src.seek(position.toLong())
-                    
+
                     val buffer = ByteArray(size.toInt())
                     val readBytes = src.read(buffer, 0, size.toInt())
                     if (readBytes > 0) {
@@ -41,12 +54,14 @@ public actual object PdfExtractor {
                     0
                 }
             }
-            
+
             val docPtr = FPDF_LoadCustomDocument(fileAccess.ptr, null)
             if (docPtr == null) {
                 stableRef.dispose()
                 nativeHeap.free(fileAccess)
-                throw IllegalArgumentException("Failed to parse PDF document via native C-Interop FPDF_FILEACCESS iOS")
+                throw IllegalArgumentException(
+                    "Failed to parse PDF document via native C-Interop FPDF_FILEACCESS iOS"
+                )
             }
             IosPdfDocument(docPtr, source, stableRef, fileAccess.ptr)
         }

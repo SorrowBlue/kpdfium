@@ -54,7 +54,9 @@ internal class KPdfiumFetcher(
                 return result
             }
 
-            PdfExtractor.openDocument(RealSeekableSource(options.context, data.file)).use { document ->
+            PdfExtractor.openDocument(
+                RealSeekableSource(options.context, data.file)
+            ).use { document ->
                 val newSnapshot =
                     writeToDiskCache(snapshot = snapshot) { sink ->
                         document.getPage(data.pageIndex).use {
