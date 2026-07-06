@@ -1,57 +1,19 @@
 @file:OptIn(ExperimentalForeignApi::class)
+@file:Suppress("WildcardImport")
+
 package com.sorrowblue.kpdfium
 
-import com.sorrowblue.kpdfium.native.FPDFBitmap_CreateEx
-import com.sorrowblue.kpdfium.native.FPDFBitmap_Destroy
-import com.sorrowblue.kpdfium.native.FPDFBitmap_FillRect
-import com.sorrowblue.kpdfium.native.FPDFBitmap_GetBuffer
-import com.sorrowblue.kpdfium.native.FPDF_BITMAP
-import com.sorrowblue.kpdfium.native.FPDF_ClosePage
-import com.sorrowblue.kpdfium.native.FPDF_DOCUMENT
-import com.sorrowblue.kpdfium.native.FPDF_GetPageHeightF
-import com.sorrowblue.kpdfium.native.FPDF_GetPageWidthF
-import com.sorrowblue.kpdfium.native.FPDF_LoadPage
-import com.sorrowblue.kpdfium.native.FPDF_PAGE
-import com.sorrowblue.kpdfium.native.FPDF_RenderPageBitmap
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.FloatVar
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.alloc
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.ptr
-import kotlinx.cinterop.reinterpret
-import kotlinx.cinterop.usePinned
+import com.sorrowblue.kpdfium.native.*
+import kotlinx.cinterop.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.io.Sink
-import platform.CoreFoundation.CFDataCreate
-import platform.CoreFoundation.CFDataCreateMutable
-import platform.CoreFoundation.CFDataGetBytePtr
-import platform.CoreFoundation.CFDataGetLength
-import platform.CoreFoundation.CFDictionaryCreateMutable
-import platform.CoreFoundation.CFDictionarySetValue
-import platform.CoreFoundation.CFMutableDictionaryRef
-import platform.CoreFoundation.CFNumberCreate
-import platform.CoreFoundation.CFRelease
-import platform.CoreFoundation.CFStringCreateWithCString
-import platform.CoreFoundation.CFStringRef
-import platform.CoreFoundation.kCFNumberFloatType
-import platform.CoreFoundation.kCFStringEncodingUTF8
-import platform.CoreGraphics.CGColorRenderingIntent
-import platform.CoreGraphics.CGColorSpaceCreateDeviceRGB
-import platform.CoreGraphics.CGColorSpaceRelease
-import platform.CoreGraphics.CGDataProviderCreateWithCFData
-import platform.CoreGraphics.CGDataProviderRelease
-import platform.CoreGraphics.CGImageAlphaInfo
-import platform.CoreGraphics.CGImageCreate
-import platform.CoreGraphics.CGImageRef
-import platform.CoreGraphics.CGImageRelease
-import platform.ImageIO.CGImageDestinationAddImage
-import platform.ImageIO.CGImageDestinationCreateWithData
-import platform.ImageIO.CGImageDestinationFinalize
-import platform.ImageIO.kCGImageDestinationLossyCompressionQuality
+import kotlinx.io.write
+import platform.CoreFoundation.*
+import platform.CoreGraphics.*
+import platform.ImageIO.*
 import platform.posix.memcpy
 
 private const val POINTS_PER_INCH = 72.0f
@@ -151,7 +113,7 @@ internal class IosPdfPage(
         val colorSpace = CGColorSpaceCreateDeviceRGB()
         // BGRA 32-bit (Premultiplied First, Little Endian)
         val bitmapInfo =
-            CGImageAlphaInfo.kCGImageAlphaPremultipliedFirst.value or CG_BITMAP_BYTE_ORDER_32_LITTLE
+            (CGImageAlphaInfo.kCGImageAlphaPremultipliedFirst.value or CG_BITMAP_BYTE_ORDER_32_LITTLE).toULong()
 
         val cgImage = CGImageCreate(
             width = targetWidth.toULong(),

@@ -1,20 +1,10 @@
 @file:OptIn(ExperimentalForeignApi::class)
+@file:Suppress("WildcardImport")
 
 package com.sorrowblue.kpdfium
 
-import com.sorrowblue.kpdfium.native.FPDF_FILEACCESS
-import com.sorrowblue.kpdfium.native.FPDF_InitLibrary
-import com.sorrowblue.kpdfium.native.FPDF_LoadCustomDocument
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.StableRef
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.alloc
-import kotlinx.cinterop.asCPointer
-import kotlinx.cinterop.asStableRef
-import kotlinx.cinterop.nativeHeap
-import kotlinx.cinterop.ptr
-import kotlinx.cinterop.staticCFunction
-import kotlinx.cinterop.usePinned
+import com.sorrowblue.kpdfium.native.*
+import kotlinx.cinterop.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -63,6 +53,6 @@ public actual object PdfExtractor {
                     "Failed to parse PDF document via native C-Interop FPDF_FILEACCESS iOS"
                 )
             }
-            IosPdfDocument(docPtr, source, stableRef, fileAccess.ptr)
+            IosPdfDocument(docPtr, source, stableRef, fileAccess.pat)
         }
 }

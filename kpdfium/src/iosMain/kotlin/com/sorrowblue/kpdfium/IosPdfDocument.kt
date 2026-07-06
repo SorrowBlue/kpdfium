@@ -1,15 +1,10 @@
 @file:OptIn(ExperimentalForeignApi::class)
+@file:Suppress("WildcardImport")
 
 package com.sorrowblue.kpdfium
 
-import com.sorrowblue.kpdfium.native.FPDF_CloseDocument
-import com.sorrowblue.kpdfium.native.FPDF_DOCUMENT
-import com.sorrowblue.kpdfium.native.FPDF_FILEACCESS
-import com.sorrowblue.kpdfium.native.FPDF_GetPageCount
-import kotlinx.cinterop.CPointer
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.StableRef
-import kotlinx.cinterop.nativeHeap
+import com.sorrowblue.kpdfium.native.*
+import kotlinx.cinterop.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
