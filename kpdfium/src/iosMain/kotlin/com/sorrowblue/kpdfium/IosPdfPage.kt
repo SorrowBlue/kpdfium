@@ -88,7 +88,7 @@ internal class IosPdfPage(
                 "Failed to create FPDF_BITMAP of size ${targetWidth}x$targetHeight"
             )
         // Fill background with white
-        FPDFBitmap_FillRect(bitmap, 0, 0, targetWidth, targetHeight, COLOR_WHITE)
+        FPDFBitmap_FillRect(bitmap, 0, 0, targetWidth, targetHeight, COLOR_WHITE.toULong())
         // Render page to bitmap
         FPDF_RenderPageBitmap(bitmap, pagePtr, 0, 0, targetWidth, targetHeight, 0, 0)
         return bitmap
@@ -113,7 +113,7 @@ internal class IosPdfPage(
         val colorSpace = CGColorSpaceCreateDeviceRGB()
         // BGRA 32-bit (Premultiplied First, Little Endian)
         val bitmapInfo =
-            (CGImageAlphaInfo.kCGImageAlphaPremultipliedFirst.value or CG_BITMAP_BYTE_ORDER_32_LITTLE).toULong()
+            CGImageAlphaInfo.kCGImageAlphaPremultipliedFirst.value or CG_BITMAP_BYTE_ORDER_32_LITTLE
 
         val cgImage = CGImageCreate(
             width = targetWidth.toULong(),
@@ -144,7 +144,7 @@ internal class IosPdfPage(
             qualityVar.value = quality / QUALITY_PERCENT
             val qualityNum = CFNumberCreate(
                 null,
-                kCFNumberFloatType,
+                kCFNumberFloatType.toULong(),
                 qualityVar.ptr
             )
             if (qualityNum != null) {

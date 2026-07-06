@@ -48,11 +48,11 @@ public actual object PdfExtractor {
             val docPtr = FPDF_LoadCustomDocument(fileAccess.ptr, null)
             if (docPtr == null) {
                 stableRef.dispose()
-                nativeHeap.free(fileAccess)
+                nativeHeap.free(fileAccess.ptr)
                 throw IllegalArgumentException(
                     "Failed to parse PDF document via native C-Interop FPDF_FILEACCESS iOS"
                 )
             }
-            IosPdfDocument(docPtr, source, stableRef, fileAccess.pat)
+            IosPdfDocument(docPtr, source, stableRef, fileAccess.ptr)
         }
 }
