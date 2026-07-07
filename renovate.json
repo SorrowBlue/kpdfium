@@ -12,20 +12,20 @@
       "automerge": true
     },
     {
-      "matchPackagePatterns": [
-        "^org\\.jetbrains\\.kotlin",
-        "^org\\.jetbrains\\.compose",
-        "^io\\.coil-kt\\.coil3",
-        "^io\\.github\\.vinceglb"
-      ],
-      "groupName": "Kotlin & Compose Multiplatform dependencies"
+      "groupName": "Kotlin & Compose Multiplatform dependencies",
+      "matchPackageNames": [
+        "/^org\\.jetbrains\\.kotlin/",
+        "/^org\\.jetbrains\\.compose/",
+        "/^io\\.coil-kt\\.coil3/",
+        "/^io\\.github\\.vinceglb/"
+      ]
     },
     {
-      "matchPackagePatterns": [
-        "^dev\\.detekt",
-        "^io\\.nlopez\\.compose\\.rules"
-      ],
-      "groupName": "Detekt static analysis tools"
+      "groupName": "Detekt static analysis tools",
+      "matchPackageNames": [
+        "/^dev\\.detekt/",
+        "/^io\\.nlopez\\.compose\\.rules/"
+      ]
     },
     {
       "matchManagers": ["github-actions"],
