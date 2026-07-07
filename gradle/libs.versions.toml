@@ -17,7 +17,7 @@ kotlin = "2.4.0"
 kotlinxCoroutines = "1.11.0"
 kotlinxIo = "0.9.1"
 kotlinx-serialization = "1.11.0"
-maven-publish = "0.36.0"
+maven-publish = "0.37.0"
 pdfium = "chromium/7857"
 
 [libraries]
