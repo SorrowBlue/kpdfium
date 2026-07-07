@@ -65,9 +65,27 @@ jobs:
 
   allchecks:
     name: All Checks Passed
-    needs: build
-    if: needs.check-commit.outputs.should-run == 'true'
+    needs: [check-commit, build]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Confirm all checks passed
-        run: echo "All checks passed!"
+        run: |
+          SHOULD_RUN="${{ needs.check-commit.outputs.should-run }}"
+          BUILD_RESULT="${{ needs.build.result }}"
+          
+          echo "should-run: $SHOULD_RUN"
+          echo "build-result: $BUILD_RESULT"
+          
+          if [ "$SHOULD_RUN" = "true" ]; then
+            if [ "$BUILD_RESULT" = "success" ]; then
+              echo "All checks passed successfully!"
+              exit 0
+            else
+              echo "Error: Build did not succeed (Result: $BUILD_RESULT)."
+              exit 1
+            fi
+          else
+            echo "Skipped checks because should-run is false."
+            exit 0
+          fi
