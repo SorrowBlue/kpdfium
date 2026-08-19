@@ -13,6 +13,19 @@ internal object JniLoader {
     fun load() {
         if (isLoaded) return
 
+        try {
+            try {
+                System.loadLibrary("pdfium")
+            } catch (_: UnsatisfiedLinkError) {
+                // Ignore and proceed to load the JNI bridge
+            }
+            System.loadLibrary("pdfium-jni")
+            isLoaded = true
+            return
+        } catch (_: UnsatisfiedLinkError) {
+            // Fall back to extracting the library from JAR resources
+        }
+
         runCatching {
             val os = System.getProperty("os.name").lowercase()
             val arch = System.getProperty("os.arch").lowercase()
