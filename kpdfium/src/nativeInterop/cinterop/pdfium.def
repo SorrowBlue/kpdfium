@@ -1,3 +1,5 @@
 headers = fpdfview.h
 headerFilter = fpdf*
 package = com.sorrowblue.kpdfium.native
+staticLibraries = libpdfium.a
+linkerOpts = -lc++ -framework CoreFoundation -framework CoreGraphics

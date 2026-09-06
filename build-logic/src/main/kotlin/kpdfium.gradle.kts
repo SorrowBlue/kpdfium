@@ -7,6 +7,7 @@ import org.gradle.api.provider.Property
 // 1. Define configuration Extension interface
 interface DownloadPdfiumExtension {
     val pdfiumVersion: Property<String>
+    val pdfiumIosVersion: Property<String>
     val enableLocalCompile: Property<Boolean>
     val architectures: ListProperty<String>
     val jniLibsDir: DirectoryProperty
@@ -122,6 +123,7 @@ fun Project.configureKmpJvm(extension: DownloadPdfiumExtension) {
         description = "Downloads precompiled PDFium Desktop binaries depending on host OS"
 
         pdfiumVersion.set(extension.pdfiumVersion)
+        pdfiumIosVersion.set(extension.pdfiumIosVersion)
         buildTmpDir.set(extension.buildTmpDir)
         headersDir.set(extension.headersDir)
         extractHeaders.set(true)
@@ -202,21 +204,9 @@ fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
         if (!hasIos) return@afterEvaluate
 
         println("kpdfium plugin: Auto-configuring iOS Native PDFium Build Graph...")
-        // Configure C-Interop and static linking for iOS targets
-        kotlin.targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().forEach {
-                target
-            ->
+        // Configure C-Interop and static library embedding for iOS targets
+        kotlin.targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().forEach { target ->
             if (target.name.startsWith("ios")) {
-                // A. Configure C-Interop for headers
-                target.compilations.getByName("main") {
-                    @Suppress("UnusedVariable")
-                    val pdfium by cinterops.creating {
-                        defFile(project.file("src/nativeInterop/cinterop/pdfium.def"))
-                        includeDirs(extension.headersDir)
-                    }
-                }
-
-                // B. Automatically link libpdfium.a static library
                 val platformClassifier = when (target.name) {
                     "iosX64" -> "ios-simulator-x64"
                     "iosArm64" -> "ios-device-arm64"
@@ -224,10 +214,16 @@ fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
                     else -> null
                 }
 
-                if (platformClassifier != null) {
-                    target.binaries.all {
-                        val libDir = extension.jniLibsDir.get().dir(platformClassifier).asFile
-                        linkerOpts("-L${libDir.absolutePath}", "-lpdfium")
+                // Configure C-Interop for headers and static library embedding into klib
+                target.compilations.getByName("main") {
+                    @Suppress("UnusedVariable")
+                    val pdfium by cinterops.creating {
+                        defFile(project.file("src/nativeInterop/cinterop/pdfium.def"))
+                        includeDirs(extension.headersDir)
+                        if (platformClassifier != null) {
+                            val libDir = extension.jniLibsDir.get().dir(platformClassifier).asFile
+                            extraOpts("-libraryPath", libDir.absolutePath)
+                        }
                     }
                 }
             }
