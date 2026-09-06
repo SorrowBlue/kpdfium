@@ -12,7 +12,9 @@ import platform.posix.memcpy
 
 public actual object PdfExtractor {
     init {
-        FPDF_InitLibrary()
+        runWithPdfiumLock {
+            FPDF_InitLibrary()
+        }
     }
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
@@ -45,7 +47,9 @@ public actual object PdfExtractor {
                 }
             }
 
-            val docPtr = FPDF_LoadCustomDocument(fileAccess.ptr, null)
+            val docPtr = runWithPdfiumLock {
+                FPDF_LoadCustomDocument(fileAccess.ptr, null)
+            }
             if (docPtr == null) {
                 stableRef.dispose()
                 nativeHeap.free(fileAccess.ptr)
