@@ -10,7 +10,6 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.io.Sink
-import kotlinx.io.write
 import platform.CoreFoundation.*
 import platform.CoreGraphics.*
 import platform.ImageIO.*
@@ -154,7 +153,7 @@ internal class IosPdfPage(
             qualityVar.value = quality / QUALITY_PERCENT
             val qualityNum = CFNumberCreate(
                 null,
-                kCFNumberFloatType.toLong(),
+                kCFNumberFloatType,
                 qualityVar.ptr
             )
             if (qualityNum != null) {

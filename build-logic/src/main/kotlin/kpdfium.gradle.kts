@@ -3,6 +3,7 @@ import com.sorrowblue.kpdfium.plugin.DownloadPdfiumTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 // 1. Define configuration Extension interface
 interface DownloadPdfiumExtension {
@@ -205,7 +206,7 @@ fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
 
         println("kpdfium plugin: Auto-configuring iOS Native PDFium Build Graph...")
         // Configure C-Interop and static library embedding for iOS targets
-        kotlin.targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().forEach { target ->
+        kotlin.targets.withType<KotlinNativeTarget>().forEach { target ->
             if (target.name.startsWith("ios")) {
                 val platformClassifier = when (target.name) {
                     "iosX64" -> "ios-simulator-x64"
@@ -216,8 +217,7 @@ fun Project.configureKmpIos(extension: DownloadPdfiumExtension) {
 
                 // Configure C-Interop for headers and static library embedding into klib
                 target.compilations.getByName("main") {
-                    @Suppress("UnusedVariable")
-                    val pdfium by cinterops.creating {
+                    cinterops.create("pdfium") {
                         defFile(project.file("src/nativeInterop/cinterop/pdfium.def"))
                         includeDirs(extension.headersDir)
                         if (platformClassifier != null) {
