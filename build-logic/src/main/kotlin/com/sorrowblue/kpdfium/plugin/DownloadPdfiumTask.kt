@@ -233,7 +233,6 @@ abstract class DownloadPdfiumTask : DefaultTask() {
         File(destDir, "lib").deleteRecursively()
         File(destDir, "release").deleteRecursively()
         File(destDir, "default").deleteRecursively()
-        File(destDir, "libpdfium.dylib").delete()
         if (headersDest != null) {
             File(headersDest, "include").deleteRecursively()
             File(headersDest, "release").deleteRecursively()
