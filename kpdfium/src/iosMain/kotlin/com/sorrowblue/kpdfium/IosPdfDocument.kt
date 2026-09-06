@@ -24,7 +24,7 @@ internal class IosPdfDocument(
     override val pageCount: Int
         get() {
             checkClosed()
-            return FPDF_GetPageCount(docPtr)
+            return runWithPdfiumLock { FPDF_GetPageCount(docPtr) }
         }
 
     override suspend fun getPage(pageIndex: Int): PdfPage = mutex.withLock {
@@ -40,7 +40,9 @@ internal class IosPdfDocument(
     override fun close() {
         if (isClosed) return
         isClosed = true
-        FPDF_CloseDocument(docPtr)
+        runWithPdfiumLock {
+            FPDF_CloseDocument(docPtr)
+        }
         stableRef.dispose()
         nativeHeap.free(fileAccess)
         source.close()

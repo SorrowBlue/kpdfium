@@ -31,8 +31,9 @@ internal class IosPdfPage(
     override val pageIndex: Int
 ) : PdfPage {
 
-    private val pagePtr: FPDF_PAGE = FPDF_LoadPage(docPtr, pageIndex)
-        ?: throw IllegalArgumentException("Failed to load PDF page $pageIndex on iOS")
+    private val pagePtr: FPDF_PAGE = runWithPdfiumLock {
+        FPDF_LoadPage(docPtr, pageIndex)
+    } ?: throw IllegalArgumentException("Failed to load PDF page $pageIndex on iOS")
 
     private var isClosed = false
 
@@ -43,13 +44,13 @@ internal class IosPdfPage(
     override val width: Int
         get() {
             checkClosed()
-            return FPDF_GetPageWidthF(pagePtr).toInt()
+            return runWithPdfiumLock { FPDF_GetPageWidthF(pagePtr).toInt() }
         }
 
     override val height: Int
         get() {
             checkClosed()
-            return FPDF_GetPageHeightF(pagePtr).toInt()
+            return runWithPdfiumLock { FPDF_GetPageHeightF(pagePtr).toInt() }
         }
 
     override suspend fun render(dpi: Int, format: ImageFormat, quality: Int): ByteArray =
@@ -62,7 +63,9 @@ internal class IosPdfPage(
                 val targetWidth = (width * scale).toInt()
                 val targetHeight = (height * scale).toInt()
 
-                val bitmap = renderToBitmap(targetWidth, targetHeight)
+                val bitmap = runWithPdfiumLock {
+                    renderToBitmap(targetWidth, targetHeight)
+                }
                 try {
                     val cgImage = bitmap.toCGImage(targetWidth, targetHeight)
                     try {
@@ -71,7 +74,9 @@ internal class IosPdfPage(
                         CGImageRelease(cgImage)
                     }
                 } finally {
-                    FPDFBitmap_Destroy(bitmap)
+                    runWithPdfiumLock {
+                        FPDFBitmap_Destroy(bitmap)
+                    }
                 }
             }
         }
@@ -138,7 +143,12 @@ internal class IosPdfPage(
             ?: throw IllegalStateException("Failed to create UTType string")
 
     private fun createJpegOptions(quality: Int): CFMutableDictionaryRef? {
-        val options = CFDictionaryCreateMutable(null, 1, null, null)
+        val options = CFDictionaryCreateMutable(
+            null,
+            1,
+            kCFTypeDictionaryKeyCallBacks.ptr,
+            kCFTypeDictionaryValueCallBacks.ptr
+        )
         memScoped {
             val qualityVar = alloc<FloatVar>()
             qualityVar.value = quality / QUALITY_PERCENT
@@ -234,6 +244,8 @@ internal class IosPdfPage(
     override fun close() {
         if (isClosed) return
         isClosed = true
-        FPDF_ClosePage(pagePtr)
+        runWithPdfiumLock {
+            FPDF_ClosePage(pagePtr)
+        }
     }
 }
