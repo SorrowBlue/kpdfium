@@ -19,6 +19,7 @@ kotlinxIo = "0.9.1"
 kotlinx-serialization = "1.11.0"
 maven-publish = "0.37.0"
 pdfium = "chromium/7857"
+pdfiumIos = "0.3.0"
 
 [libraries]
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }

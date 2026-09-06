@@ -18,8 +18,6 @@ kotlin {
 
     jvm()
 
-    val jniLibsDir = project(":kpdfium").layout.projectDirectory.dir("src/cpp/pdfium")
-
     val xcframeworkName = "ComposeApp"
     listOf(
         iosArm64(),
@@ -29,18 +27,9 @@ kotlin {
             baseName = xcframeworkName
             isStatic = false
             export(projects.kpdfium)
-
-            val platformClassifier = when (iosTarget.name) {
-                "iosArm64" -> "ios-device-arm64"
-                "iosSimulatorArm64" -> "ios-simulator-arm64"
-                else -> null
-            }
-            if (platformClassifier != null) {
-                val libDir = jniLibsDir.dir(platformClassifier)
-                linkerOpts("-L${libDir.asFile.absolutePath}", "-lpdfium")
-            }
         }
     }
+
 
     jvmToolchain {
         vendor.set(JvmVendorSpec.ADOPTIUM)
@@ -100,68 +89,3 @@ compose.desktop {
     }
 }
 
-tasks.register("embedAndSignPdfium") {
-    val builtProductsDir = System.getenv("BUILT_PRODUCTS_DIR")
-    val contentsFolderPath = System.getenv("CONTENTS_FOLDER_PATH")
-    val codesignIdentity = System.getenv("EXPANDED_CODE_SIGN_IDENTITY") ?: "-"
-
-    if (builtProductsDir != null) {
-        val platformClassifier = when (System.getenv("PLATFORM_NAME")) {
-            "iphoneos" -> "ios-device-arm64"
-            "iphonesimulator" -> "ios-simulator-arm64"
-            else -> null
-        }
-        if (platformClassifier != null) {
-            val jniLibsDir = project(":kpdfium").layout.projectDirectory.dir("src/cpp/pdfium")
-            val dylibFile = jniLibsDir.dir(platformClassifier).file("libpdfium.dylib").asFile
-            if (dylibFile.exists()) {
-                val targetDir = file(builtProductsDir)
-                val appDir = targetDir.resolve(contentsFolderPath ?: "")
-
-                inputs.file(dylibFile)
-                outputs.file(targetDir.resolve("libpdfium.dylib"))
-                if (contentsFolderPath != null) {
-                    outputs.file(appDir.resolve("libpdfium.dylib"))
-                }
-
-                doLast {
-                    // $BUILT_PRODUCTS_DIR へのコピー
-                    val targetFile1 = targetDir.resolve("libpdfium.dylib")
-                    dylibFile.copyTo(targetFile1, overwrite = true)
-                    ProcessBuilder(
-                        "codesign",
-                        "--force",
-                        "--sign",
-                        codesignIdentity,
-                        "--timestamp=none",
-                        targetFile1.absolutePath
-                    )
-                        .inheritIO()
-                        .start()
-                        .waitFor()
-
-                    // アプリの .app バンドル内へのコピー
-                    if (contentsFolderPath != null) {
-                        val targetFile2 = appDir.resolve("libpdfium.dylib")
-                        dylibFile.copyTo(targetFile2, overwrite = true)
-                        ProcessBuilder(
-                            "codesign",
-                            "--force",
-                            "--sign",
-                            codesignIdentity,
-                            "--timestamp=none",
-                            targetFile2.absolutePath
-                        )
-                            .inheritIO()
-                            .start()
-                            .waitFor()
-                    }
-                }
-            }
-        }
-    }
-}
-
-tasks.named("embedAndSignAppleFrameworkForXcode") {
-    finalizedBy("embedAndSignPdfium")
-}
