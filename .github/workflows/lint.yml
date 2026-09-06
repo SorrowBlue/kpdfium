@@ -20,12 +20,12 @@ jobs:
             sarif_file: "build-logic/build/reports/detekt/main.sarif"
             category: "detekt"
           - name: Android Lint Debug
-            task: "lintDebug"
-            sarif_file: "build/reports/lint/lint-result.sarif"
+            task: ":sample:androidApp:lintDebug"
+            sarif_file: "sample/androidApp/build/reports/lint-results-debug.sarif"
             category: "android-lint"
           - name: android Lint Release
-            task: "lintRelease"
-            sarif_file: "build/reports/lint/lint-result.sarif"
+            task: ":sample:androidApp:lintRelease"
+            sarif_file: "sample/androidApp/build/reports/lint-results-release.sarif"
             category: "android-lint"
     name: 🔍️ ${{ matrix.name }}
     runs-on: ubuntu-latest
