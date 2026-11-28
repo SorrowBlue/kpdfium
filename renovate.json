@@ -36,8 +36,8 @@
     ":arrow_up: dependencies",
     ":robot: renovate"
   ],
-  "dependencyDashboardLabels": [
-    ":robot: renovate"
-  ],
+  "dependencyDashboard": {
+    "labels": [":robot: renovate"]
+  },
   "recreateWhen": "never"
 }
